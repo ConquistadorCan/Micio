@@ -9,12 +9,21 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/node": "^25.5.2",
+    "@types/pg": "^8.20.0",
     "typescript": "^6.0.2"
   },
   "dependencies": {
-    "@micio/shared": "*"
+    "@fastify/cookie": "^11.0.2",
+    "@micio/shared": "*",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.4.0",
+    "fastify": "^5.8.4",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.20.0",
+    "socket.io": "^4.8.3"
   }
 }
