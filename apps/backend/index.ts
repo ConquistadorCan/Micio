@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import env from "./config/index.js";
+import io from "./socket/index.js";
 
 const app = Fastify({
     logger: true
@@ -14,4 +15,5 @@ app.listen({ port: env.PORT }, (err, address) => {
         app.log.error(err);
         process.exit(1);
     }
+    io.attach(app.server);
 });
