@@ -3,6 +3,7 @@ import 'dotenv/config';
 
 const envSchema = zod.object({
     DATABASE_URL: zod.string(),
+    DIRECT_URL: zod.string(),
     JWT_SECRET: zod.string(),
     JWT_REFRESH_SECRET: zod.string(),
     PORT: zod.string().transform(val => parseInt(val, 10)),

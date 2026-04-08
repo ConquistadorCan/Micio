@@ -5,11 +5,11 @@ export const UserSchema = zod.object({
     email: zod.email(),
     nickname: zod.string().min(3).max(25),
     password: zod.string().min(8).max(100),
-    created_at: zod.date(),
-    updated_at: zod.date()
+    createdAt: zod.date(),
+    updatedAt: zod.date()
 });
 
-export const UserCreateSchema = UserSchema.omit({ id: true, created_at: true, updated_at: true });
+export const UserCreateSchema = UserSchema.omit({ id: true, createdAt: true, updatedAt: true });
 export const UserPublicSchema = UserSchema.pick({ id: true, email: true, nickname: true});
 
 export type User = zod.infer<typeof UserSchema>;
