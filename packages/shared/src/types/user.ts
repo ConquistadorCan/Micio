@@ -13,4 +13,5 @@ export const UserCreateSchema = UserSchema.omit({ id: true, createdAt: true, upd
 export const UserPublicSchema = UserSchema.pick({ id: true, email: true, nickname: true});
 
 export type User = zod.infer<typeof UserSchema>;
+export type UserCreate = zod.infer<typeof UserCreateSchema>;
 export type UserPublic = zod.infer<typeof UserPublicSchema>;
