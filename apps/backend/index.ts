@@ -1,14 +1,20 @@
 import Fastify from "fastify";
+import fastifyCookie from "@fastify/cookie";
 import env from "./config/index.js";
 import io from "./socket/index.js";
+import { authRoutes } from "./routes/auth.route.js";
 
 const app = Fastify({
     logger: true
 });
 
+app.register(fastifyCookie);
+
 app.get("/health", async (request, reply) => {
     reply.send({ status: "ok" });
 });
+
+app.register(authRoutes, { prefix: "/auth" });
 
 app.listen({ port: env.PORT }, (err, address) => {
     if (err) {

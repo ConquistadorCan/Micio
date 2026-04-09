@@ -1,10 +1,10 @@
 import { UserCreate, UserPublic } from "@micio/shared";
 import { UserService } from "./user.service.js";
-import { sign } from "jsonwebtoken";
 import { v7 as uuidv7 } from "uuid";
 import { prisma } from "../db/client.js";
 import { compare } from "bcrypt";
 import env from "../config/index.js";
+import jwt from "jsonwebtoken";
 
 const userService = new UserService();
 
@@ -78,8 +78,8 @@ export class AuthService {
             nickname: userData.nickname
         }
 
-        const accessToken = sign(payload, env.JWT_SECRET, { expiresIn: "15m" });
-        const refreshToken = sign(payload, env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
+        const accessToken = jwt.sign(payload, env.JWT_SECRET, { expiresIn: "15m" });
+        const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
 
         const refreshTokenId = uuidv7();
 
@@ -88,7 +88,7 @@ export class AuthService {
                 id: refreshTokenId,
                 token: refreshToken,
                 userId: userData.id,
-                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+                expiresAt: new Date(Date.now() + env.REFRESH_TOKEN_EXPIRES_IN)
             }
         });
 

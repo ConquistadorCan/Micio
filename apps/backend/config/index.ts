@@ -7,7 +7,9 @@ const envSchema = zod.object({
     JWT_SECRET: zod.string(),
     JWT_REFRESH_SECRET: zod.string(),
     PORT: zod.string().transform(val => parseInt(val, 10)),
-    CLIENT_URL: zod.string()
+    CLIENT_URL: zod.string(),
+    REFRESH_TOKEN_EXPIRES_IN: zod.string().transform(val => parseInt(val, 10)),
+    ACCESS_TOKEN_EXPIRES_IN: zod.string().transform(val => parseInt(val, 10))
 })
 
 const env = envSchema.parse(process.env);
