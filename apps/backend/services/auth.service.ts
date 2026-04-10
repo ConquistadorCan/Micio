@@ -5,6 +5,7 @@ import { prisma } from "../db/client.js";
 import { compare } from "bcrypt";
 import env from "../config/index.js";
 import jwt from "jsonwebtoken";
+import { JwtPayload } from "../types/auth.types.js";
 
 const userService = new UserService();
 
@@ -72,7 +73,7 @@ export class AuthService {
     }
 
     private async generateTokens(userData: UserPublic): Promise<{ accessToken: string; refreshToken: string; }> {
-        const payload = {
+        const payload: JwtPayload = {
             id: userData.id,
             email: userData.email,
             nickname: userData.nickname
@@ -82,6 +83,8 @@ export class AuthService {
         const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
 
         const refreshTokenId = uuidv7();
+
+        await prisma.refreshToken.deleteMany({ where: { userId: userData.id } });
 
         await prisma.refreshToken.create({
             data: {
