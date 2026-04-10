@@ -3,7 +3,7 @@ import fastifyCookie from "@fastify/cookie";
 import env from "./config/index.js";
 import io from "./socket/index.js";
 import { authRoutes } from "./routes/auth.route.js";
-import { conversationRoutes } from "./routes/conversation.route.js";
+import { protectedRoutes } from "./routes/protected.routes.js";
 
 const app = Fastify({
     logger: true
@@ -16,7 +16,7 @@ app.get("/health", async (request, reply) => {
 });
 
 app.register(authRoutes, { prefix: "/auth" });
-app.register(conversationRoutes, { prefix: "/api" });
+app.register(protectedRoutes, { prefix: "/api" });
 
 app.listen({ port: env.PORT }, (err, address) => {
     if (err) {

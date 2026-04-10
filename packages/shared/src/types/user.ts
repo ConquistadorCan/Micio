@@ -11,6 +11,7 @@ export const UserSchema = zod.object({
 
 export const UserLoginSchema = UserSchema.pick({ email: true, password: true });
 export const UserCreateSchema = UserSchema.omit({ id: true, createdAt: true, updatedAt: true });
+export const UserMinimalSchema = UserSchema.pick({ id: true, nickname: true });
 export const UserPublicSchema = UserSchema.pick({ id: true, email: true, nickname: true});
 
 export type User = zod.infer<typeof UserSchema>;

@@ -7,6 +7,9 @@
     "outDir": "./dist",
     "strict": true,
     "skipLibCheck": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "paths": {
+      "@db": ["./prisma/generated/prisma"],
+    }
   }
 }
