@@ -4,14 +4,17 @@ import env from "./config/index.js";
 import io from "./socket/index.js";
 import { authRoutes } from "./routes/auth.route.js";
 import { protectedRoutes } from "./routes/protected.routes.js";
+import { logger } from "./utils/logger.js";
+import { errorHandler } from "./middlewares/error.handler.js";
 
 const app = Fastify({
-    logger: true
+    loggerInstance: logger
 });
 
 app.register(fastifyCookie);
+app.register(errorHandler);
 
-app.get("/health", async (request, reply) => {
+app.get("/health", async (_request, reply) => {
     reply.send({ status: "ok" });
 });
 
@@ -20,8 +23,9 @@ app.register(protectedRoutes, { prefix: "/api" });
 
 app.listen({ port: env.PORT }, (err, address) => {
     if (err) {
-        app.log.error(err);
+        logger.error(err, "Server failed to start");
         process.exit(1);
     }
+    logger.info(`Server listening at ${address}`);
     io.attach(app.server);
 });

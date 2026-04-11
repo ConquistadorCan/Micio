@@ -1,6 +1,7 @@
 import { prisma } from "../db/client.js";
 import { v7 as uuidv7 } from "uuid";
 import { ConversationCreate, ConversationPublic, ConversationTypeSchema } from "@micio/shared";
+import { ConflictError, ValidationError } from "../utils/errors.js";
 
 export class ConversationService {
     async getConversationsForUser(userId: string): Promise <ConversationPublic[]> {
@@ -38,11 +39,11 @@ export class ConversationService {
                     : [...conversationData.participantIds, userId];
 
                 if (participantIds.length !== 2) {
-                    throw new Error('Private conversation must have exactly 2 participants');
+                    throw new ValidationError('Private conversation must have exactly 2 participants');
                 }
 
                 if (conversationData.conversationName) {
-                    throw new Error('Private conversation cannot have a name');
+                    throw new ValidationError('Private conversation cannot have a name');
                 }
 
                 const existing = await prisma.conversation.findFirst({
@@ -55,7 +56,7 @@ export class ConversationService {
                 });
 
                 if (existing) {
-                    throw new Error('Private conversation already exists');
+                    throw new ConflictError('Private conversation already exists');
                 }
 
                 const conversation = await prisma.conversation.create({
@@ -96,11 +97,11 @@ export class ConversationService {
                     : [...conversationData.participantIds, userId];
 
                 if (participantIds.length < 3) {
-                    throw new Error('Group conversation must have at least 3 participants');
+                    throw new ValidationError('Group conversation must have at least 3 participants');
                 }
-                
+
                 if (!conversationData.conversationName) {
-                    throw new Error('Group conversation must have a name');
+                    throw new ValidationError('Group conversation must have a name');
                 }
 
                 const conversation = await prisma.conversation.create({

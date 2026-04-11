@@ -2,6 +2,7 @@ import { UserPublic, UserCreate } from "@micio/shared";
 import { prisma } from "../db/client.js";
 import { v7 as uuidv7 } from "uuid";
 import { hash } from "bcrypt";
+import { ConflictError } from "../utils/errors.js";
 
 const SALT_ROUNDS = 10;
 
@@ -33,11 +34,11 @@ export class UserService {
         ]);
 
         if (existingMail) {
-            throw new Error("Email already in use");
+            throw new ConflictError("Email already in use");
         }
 
         if (existingNickname) {
-            throw new Error("Nickname already in use");
+            throw new ConflictError("Nickname already in use");
         }
     }
 }

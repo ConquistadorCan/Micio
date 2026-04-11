@@ -6,6 +6,7 @@ import { compare } from "bcrypt";
 import env from "../config/index.js";
 import jwt from "jsonwebtoken";
 import { JwtPayload } from "../types/auth.types.js";
+import { UnauthorizedError, NotFoundError } from "../utils/errors.js";
 
 const userService = new UserService();
 
@@ -26,13 +27,13 @@ export class AuthService {
         const user = await prisma.user.findUnique({ where: { email } });
 
         if (!user) {
-            throw new Error("Invalid email or password");
+            throw new UnauthorizedError("Invalid email or password");
         }
 
         const isPasswordValid = await compare(password, user.password);
 
         if (!isPasswordValid) {
-            throw new Error("Invalid email or password");
+            throw new UnauthorizedError("Invalid email or password");
         }
 
         const { accessToken, refreshToken } = await this.generateTokens({
@@ -48,13 +49,13 @@ export class AuthService {
         const refreshTokenData = await prisma.refreshToken.findUnique({ where:  { token: refreshToken }  });
 
         if (!refreshTokenData || refreshTokenData.expiresAt < new Date()) {
-            throw new Error("Invalid refresh token");
+            throw new UnauthorizedError("Invalid refresh token");
         }
 
         const user = await prisma.user.findUnique({ where: { id: refreshTokenData.userId } });
 
         if (!user) {
-            throw new Error("User not found");
+            throw new NotFoundError("User not found");
         }
 
         const { accessToken, refreshToken: newRefreshToken } = await this.generateTokens({
