@@ -21,11 +21,12 @@ app.get("/health", async (_request, reply) => {
 app.register(authRoutes, { prefix: "/auth" });
 app.register(protectedRoutes, { prefix: "/api" });
 
-app.listen({ port: env.PORT }, (err, address) => {
-    if (err) {
-        logger.error(err, "Server failed to start");
-        process.exit(1);
-    }
-    logger.info(`Server listening at ${address}`);
+const start = async () => {
+    await app.listen({ port: env.PORT });
     io.attach(app.server);
+};
+
+start().catch((err) => {
+    logger.error(err, "Server failed to start");
+    process.exit(1);
 });
