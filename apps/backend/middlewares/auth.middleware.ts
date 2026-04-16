@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import jwt from "jsonwebtoken";
 import env from "../config/index.js";
-import { JwtPayload } from "../types/auth.types.js";
+import { UserPublic } from "@micio/shared";
 import { UnauthorizedError } from "../utils/errors.js";
 
 
@@ -19,7 +19,7 @@ export async function authMiddleware(
 
     try {
         const decoded = jwt.verify(token, env.JWT_SECRET);
-        request.userJwtPayload = decoded as JwtPayload;
+        request.userJwtPayload = decoded as UserPublic;
     } catch {
         throw new UnauthorizedError("Invalid or expired token");
     }

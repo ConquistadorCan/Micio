@@ -5,7 +5,6 @@ import { prisma } from "../db/client.js";
 import { compare } from "bcrypt";
 import env from "../config/index.js";
 import jwt from "jsonwebtoken";
-import { JwtPayload } from "../types/auth.types.js";
 import { UnauthorizedError, NotFoundError } from "../utils/errors.js";
 
 const userService = new UserService();
@@ -74,7 +73,7 @@ export class AuthService {
     }
 
     private async generateTokens(userData: UserPublic): Promise<{ accessToken: string; refreshToken: string; }> {
-        const payload: JwtPayload = {
+        const payload: UserPublic = {
             id: userData.id,
             email: userData.email,
             nickname: userData.nickname

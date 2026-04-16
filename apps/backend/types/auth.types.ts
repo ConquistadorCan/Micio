@@ -1,11 +1,7 @@
-export interface JwtPayload {
-    id: string;
-    email: string;
-    nickname: string;
-}
+import { UserPublic } from "@micio/shared";
 
 declare module "fastify" {
     interface FastifyRequest {
-        userJwtPayload?: JwtPayload;
+        userJwtPayload?: UserPublic;
     }
 }
