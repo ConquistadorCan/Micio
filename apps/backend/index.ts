@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import fastifyCookie from "@fastify/cookie";
+import fastifyCors from "@fastify/cors";
 import env from "./config/index.js";
 import io from "./socket/index.js";
 import { authRoutes } from "./routes/auth.route.js";
@@ -11,6 +12,7 @@ const app = Fastify({
     loggerInstance: logger
 });
 
+app.register(fastifyCors, { origin: env.CLIENT_URL, credentials: true });
 app.register(fastifyCookie);
 app.register(errorHandler);
 
