@@ -7,6 +7,21 @@ export function useApi() {
   const { accessToken, user, login, logout } = useAuth();
   const navigate = useNavigate();
 
+  async function authFetch<T>(url: string, method: string, body?: unknown): Promise<T> {
+    const response = await fetch(`${BASE_URL}${url}`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
+    }
+
+    return response.json() as Promise<T>;
+  }
+
   async function apiFetch<T>(url: string, method: string, body?: unknown): Promise<T> {
     const fullUrl = `${BASE_URL}${url}`;
 
@@ -46,5 +61,5 @@ export function useApi() {
     return response.json() as Promise<T>;
   }
 
-  return { apiFetch };
+  return { apiFetch, authFetch };
 }
