@@ -2,9 +2,11 @@ import { UserCreate, UserPublic } from "@micio/shared";
 import { UserService } from "./user.service.js";
 import { v7 as uuidv7 } from "uuid";
 import { prisma } from "../db/client.js";
+import { Prisma } from "../prisma/generated/prisma/index.js";
 import { compare } from "bcrypt";
 import env from "../config/index.js";
 import jwt from "jsonwebtoken";
+import { randomBytes } from "crypto";
 import { UnauthorizedError, NotFoundError } from "../utils/errors.js";
 
 const userService = new UserService();
@@ -22,79 +24,89 @@ export class AuthService {
         return { accessToken, refreshToken };
     }
 
-    async login(email: string, password: string): Promise<{ accessToken: string; refreshToken: string; }> {
+    async login(email: string, password: string) {
         const user = await prisma.user.findUnique({ where: { email } });
 
-        if (!user) {
+        if (!user || !(await compare(password, user.password))) {
             throw new UnauthorizedError("Invalid email or password");
         }
 
-        const isPasswordValid = await compare(password, user.password);
+        return await prisma.$transaction(async (tx) => {
+            await tx.refreshToken.deleteMany({ where: { userId: user.id } });
 
-        if (!isPasswordValid) {
-            throw new UnauthorizedError("Invalid email or password");
-        }
+            const tokens = this.generateTokens(user);
 
-        const { accessToken, refreshToken } = await this.generateTokens({
-            id: user.id,
-            email: user.email,
-            nickname: user.nickname
+            await this.saveRefreshToken(tx, user.id, tokens.refreshToken);
+
+            return tokens;
         });
-
-        return { accessToken, refreshToken };
     }
 
-    async refreshTokens(refreshToken: string): Promise<{ accessToken: string; newRefreshToken: string; }> {
-        const refreshTokenData = await prisma.refreshToken.findUnique({ where:  { token: refreshToken }  });
+    async refreshTokens(oldToken: string) {
+        return await prisma.$transaction(async (tx) => {
+            const tokenData = await tx.refreshToken.findUnique({
+                where: { token: oldToken }
+            });
 
-        if (!refreshTokenData || refreshTokenData.expiresAt < new Date()) {
-            throw new UnauthorizedError("Invalid refresh token");
-        }
+            if (!tokenData || tokenData.expiresAt < new Date()) {
+                throw new UnauthorizedError("Invalid refresh token");
+            }
 
-        const user = await prisma.user.findUnique({ where: { id: refreshTokenData.userId } });
+            const user = await tx.user.findUnique({
+                where: { id: tokenData.userId }
+            });
 
-        if (!user) {
-            throw new NotFoundError("User not found");
-        }
+            if (!user) {
+                throw new NotFoundError("User not found");
+            }
 
-        const { accessToken, refreshToken: newRefreshToken } = await this.generateTokens({
-            id: user.id,
-            email: user.email,
-            nickname: user.nickname
+            await tx.refreshToken.deleteMany({
+                where: { token: oldToken }
+            });
+
+            const tokens = this.generateTokens(user);
+
+            await this.saveRefreshToken(tx, user.id, tokens.refreshToken);
+
+            return {
+                accessToken: tokens.accessToken,
+                newRefreshToken: tokens.refreshToken
+            };
         });
-
-        await prisma.refreshToken.deleteMany({ where: { token: refreshToken } });
-
-        return { accessToken, newRefreshToken };
     }
 
-    async logout(refreshToken: string): Promise<void> {
-        await prisma.refreshToken.delete({ where: { token: refreshToken } });
+    async logout(refreshToken: string) {
+        await prisma.refreshToken.deleteMany({
+            where: { token: refreshToken }
+        });
     }
 
-    private async generateTokens(userData: UserPublic): Promise<{ accessToken: string; refreshToken: string; }> {
-        const payload: UserPublic = {
+    private generateTokens(userData: UserPublic): { accessToken: string; refreshToken: string } {
+        const payload = {
             id: userData.id,
             email: userData.email,
             nickname: userData.nickname
-        }
+        };
 
         const accessToken = jwt.sign(payload, env.JWT_SECRET, { expiresIn: "15m" });
-        const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
 
-        const refreshTokenId = uuidv7();
+        const refreshToken = randomBytes(64).toString("hex");
 
-        await prisma.refreshToken.deleteMany({ where: { userId: userData.id } });
+        return { accessToken, refreshToken };
+    }
 
-        await prisma.refreshToken.create({
+    private async saveRefreshToken(
+        tx: Prisma.TransactionClient,
+        userId: string,
+        refreshToken: string
+    ) {
+        await tx.refreshToken.create({
             data: {
-                id: refreshTokenId,
+                id: uuidv7(),
                 token: refreshToken,
-                userId: userData.id,
+                userId,
                 expiresAt: new Date(Date.now() + env.REFRESH_TOKEN_EXPIRES_IN)
             }
         });
-
-        return { accessToken, refreshToken };
     }
 }
