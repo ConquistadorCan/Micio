@@ -4,11 +4,7 @@ import { Eye, EyeOff, ArrowRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useApi } from '@/services/api'
 import { UserPublic } from '@micio/shared'
-
-function decodeJwt<T>(token: string): T {
-  const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-  return JSON.parse(atob(base64)) as T
-}
+import { decodeJwt } from '@/utils/jwt'
 
 export function LoginPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login')

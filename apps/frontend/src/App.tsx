@@ -4,7 +4,8 @@ import { ChatPage } from './pages/ChatPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { accessToken } = useAuth()
+  const { accessToken, isInitializing } = useAuth()
+  if (isInitializing) return null
   return accessToken ? <>{children}</> : <Navigate to="/login" replace />
 }
 

@@ -1,42 +1,56 @@
-import { createContext, useState, PropsWithChildren, useContext } from "react";
+import { createContext, useState, useEffect, PropsWithChildren, useContext } from "react";
 import { UserPublic } from "@micio/shared";
+import { decodeJwt } from "@/utils/jwt";
+
+const BASE_URL = import.meta.env.VITE_API_URL;
 
 type AuthContextType = {
     accessToken: string | null;
     user: UserPublic | null;
+    isInitializing: boolean;
     login: (token: string, userData: UserPublic) => void;
     logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-function AuthProvider( { children }: PropsWithChildren) {
-    const [accessToken, setAccessToken] = useState<string | null>(
-        () => localStorage.getItem("accessToken")
-    );
-    const [user, setUser] = useState<UserPublic | null>(
-        () => {
-            const stored = localStorage.getItem("user");
-            return stored ? JSON.parse(stored) : null;
+function AuthProvider({ children }: PropsWithChildren) {
+    const [accessToken, setAccessToken] = useState<string | null>(null);
+    const [user, setUser] = useState<UserPublic | null>(null);
+    const [isInitializing, setIsInitializing] = useState(true);
+
+    useEffect(() => {
+        async function silentRefresh() {
+            try {
+                const response = await fetch(`${BASE_URL}/auth/refresh`, {
+                    method: 'POST',
+                    credentials: 'include',
+                });
+                if (response.ok) {
+                    const { accessToken: newToken } = await response.json();
+                    setAccessToken(newToken);
+                    setUser(decodeJwt<UserPublic>(newToken));
+                }
+            } catch {
+            } finally {
+                setIsInitializing(false);
+            }
         }
-    );
+        silentRefresh();
+    }, []);
 
     const login = (token: string, userData: UserPublic) => {
-        localStorage.setItem("accessToken", token);
-        localStorage.setItem("user", JSON.stringify(userData));
         setAccessToken(token);
         setUser(userData);
     }
 
     const logout = () => {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("user");
         setAccessToken(null);
         setUser(null);
     }
 
     return (
-        <AuthContext.Provider value={{ accessToken, user, login, logout }}>
+        <AuthContext.Provider value={{ accessToken, user, isInitializing, login, logout }}>
             {children}
         </AuthContext.Provider>
     )
