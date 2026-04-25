@@ -11,15 +11,26 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 function AuthProvider( { children }: PropsWithChildren) {
-    const [accessToken, setAccessToken] = useState<string | null>(null);
-    const [user, setUser] = useState<UserPublic | null>(null);
+    const [accessToken, setAccessToken] = useState<string | null>(
+        () => localStorage.getItem("accessToken")
+    );
+    const [user, setUser] = useState<UserPublic | null>(
+        () => {
+            const stored = localStorage.getItem("user");
+            return stored ? JSON.parse(stored) : null;
+        }
+    );
 
     const login = (token: string, userData: UserPublic) => {
+        localStorage.setItem("accessToken", token);
+        localStorage.setItem("user", JSON.stringify(userData));
         setAccessToken(token);
         setUser(userData);
     }
 
     const logout = () => {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
         setAccessToken(null);
         setUser(null);
     }
