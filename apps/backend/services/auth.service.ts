@@ -8,6 +8,8 @@ import env from "../config/index.js";
 import jwt from "jsonwebtoken";
 import { randomBytes } from "crypto";
 import { UnauthorizedError, NotFoundError } from "../utils/errors.js";
+import { createHash } from "crypto";
+
 
 const userService = new UserService();
 
@@ -43,9 +45,11 @@ export class AuthService {
     }
 
     async refreshTokens(oldToken: string) {
+        const hashedOldToken = this.hashToken(oldToken);
+
         return await prisma.$transaction(async (tx) => {
             const tokenData = await tx.refreshToken.findUnique({
-                where: { token: oldToken }
+                where: { token: hashedOldToken }
             });
 
             if (!tokenData || tokenData.expiresAt < new Date()) {
@@ -61,7 +65,7 @@ export class AuthService {
             }
 
             await tx.refreshToken.deleteMany({
-                where: { token: oldToken }
+                where: { token: hashedOldToken }
             });
 
             const tokens = this.generateTokens(user);
@@ -76,8 +80,10 @@ export class AuthService {
     }
 
     async logout(refreshToken: string) {
+        const hashedOldToken = this.hashToken(refreshToken);
+
         await prisma.refreshToken.deleteMany({
-            where: { token: refreshToken }
+            where: { token: hashedOldToken }
         });
     }
 
@@ -100,13 +106,19 @@ export class AuthService {
         userId: string,
         refreshToken: string
     ) {
+        const hashedToken = this.hashToken(refreshToken);
+
         await tx.refreshToken.create({
             data: {
                 id: uuidv7(),
-                token: refreshToken,
+                token: hashedToken,
                 userId,
                 expiresAt: new Date(Date.now() + env.REFRESH_TOKEN_EXPIRES_IN)
             }
         });
+    }
+
+    private hashToken(token: string) {
+        return createHash("sha256").update(token).digest("hex");
     }
 }
