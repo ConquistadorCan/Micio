@@ -1,7 +1,8 @@
 import { getGrad, getInitials } from '@/components/chat/utils'
-import type { LocalConv, UserMin } from '@/components/chat/types'
+import type { UserMinimal } from '@micio/shared'
+import type { LocalConv } from '@/types/chat'
 
-export function Avatar({ user, size = 36 }: { user: UserMin; size?: number }) {
+export function Avatar({ user, size = 36 }: { user: UserMinimal; size?: number }) {
   return (
     <div className="micio-avatar" style={{ width: size, height: size, fontSize: Math.max(10, size * 0.36) }}>
       <div className="micio-avatar-inner" style={{ background: getGrad(user.id) }}>

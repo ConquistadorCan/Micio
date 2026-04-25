@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Search, Send } from 'lucide-react'
 import { Avatar, GroupAvatar } from '@/components/ui/avatar'
 import { formatTime } from '@/components/chat/utils'
-import type { LocalConv, LocalMsg } from '@/components/chat/types'
+import type { LocalConv, LocalMsg } from '@/types/chat'
 
 function IconBtn({ onClick, children, tooltip, size = 38 }: {
   onClick?: () => void; children: React.ReactNode; tooltip?: string; size?: number

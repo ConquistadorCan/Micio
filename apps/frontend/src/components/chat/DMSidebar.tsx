@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MessageSquare, Users, Search, Plus, MoreHorizontal, ArrowRight, X } from 'lucide-react'
 import { Avatar, GroupAvatar } from '@/components/ui/avatar'
 import { getGrad, getInitials } from '@/components/chat/utils'
-import type { LocalConv } from '@/components/chat/types'
+import type { LocalConv } from '@/types/chat'
 
 function MenuItem({ icon, label, hint, onClick, danger }: {
   icon: React.ReactNode; label: string; hint?: string; onClick: () => void; danger?: boolean

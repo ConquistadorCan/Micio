@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { Search, ArrowRight, Check } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { getGrad, getInitials } from '@/components/chat/utils'
-import type { UserMin } from '@/components/chat/types'
+import type { UserMinimal } from '@micio/shared'
 
 function ModalShell({ title, subtitle, onClose, children, footer, width = 480 }: {
   title: string; subtitle?: string; onClose: () => void; children: React.ReactNode; footer?: React.ReactNode; width?: number
@@ -36,7 +36,7 @@ function ModalShell({ title, subtitle, onClose, children, footer, width = 480 }:
 }
 
 export function NewChatModal({ onClose, onPick, knownUsers }: {
-  onClose: () => void; onPick: (userId: string) => void; knownUsers: UserMin[]
+  onClose: () => void; onPick: (userId: string) => void; knownUsers: UserMinimal[]
 }) {
   const [q, setQ] = useState('')
   const results = useMemo(() => {
@@ -71,7 +71,7 @@ export function NewChatModal({ onClose, onPick, knownUsers }: {
 }
 
 export function NewGroupModal({ onClose, onCreate, knownUsers }: {
-  onClose: () => void; onCreate: (name: string, memberIds: string[]) => void; knownUsers: UserMin[]
+  onClose: () => void; onCreate: (name: string, memberIds: string[]) => void; knownUsers: UserMinimal[]
 }) {
   const [name, setName] = useState('')
   const [q, setQ] = useState('')

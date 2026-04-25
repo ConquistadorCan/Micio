@@ -4,8 +4,8 @@ import { useAuth } from '@/context/AuthContext'
 import { useApi } from '@/services/api'
 import { connectSocket, disconnectSocket } from '@/services/socket'
 import { formatTime } from '@/components/chat/utils'
-import type { LocalConv, LocalMsg, UserMin } from '@/components/chat/types'
-import type { ConversationPublic, MessagePublic } from '@micio/shared'
+import type { LocalConv, LocalMsg } from '@/types/chat'
+import type { ConversationPublic, MessagePublic, UserMinimal } from '@micio/shared'
 import type { Socket } from 'socket.io-client'
 
 export function useChat() {
@@ -122,9 +122,9 @@ export function useChat() {
     navigate('/login')
   }, [authFetch, logout, navigate])
 
-  const knownUsers = useMemo((): UserMin[] => {
+  const knownUsers = useMemo((): UserMinimal[] => {
     const seen = new Set<string>()
-    const users: UserMin[] = []
+    const users: UserMinimal[] = []
     for (const c of convs) {
       for (const p of c.participants) {
         if (p.id !== meId && !seen.has(p.id)) {
