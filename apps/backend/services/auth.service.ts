@@ -63,7 +63,7 @@ export class AuthService {
             nickname: user.nickname
         });
 
-        await prisma.refreshToken.delete({ where: { token: refreshToken } });
+        await prisma.refreshToken.deleteMany({ where: { token: refreshToken } });
 
         return { accessToken, newRefreshToken };
     }
