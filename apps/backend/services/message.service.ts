@@ -17,7 +17,22 @@ export class MessageService {
             id: message.id,
             message: message.message,
             senderId: message.senderId,
-            conversationId: message.conversationId
+            conversationId: message.conversationId,
+            createdAt: message.createdAt
         };
+    }
+
+    async getMessagesForConversation(conversationId: string): Promise<MessagePublic[]> {
+        const messages = await prisma.message.findMany({
+            where: { conversationId },
+            orderBy: { createdAt: 'asc' }
+        });
+        return messages.map(m => ({
+            id: m.id,
+            message: m.message,
+            senderId: m.senderId,
+            conversationId: m.conversationId,
+            createdAt: m.createdAt
+        }));
     }
 }

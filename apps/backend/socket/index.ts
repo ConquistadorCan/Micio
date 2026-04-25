@@ -40,6 +40,10 @@ io.on("connection", async (socket) => {
         socket.join(conversation.id);
     })
 
+    socket.on("conversation:join", (conversationId: string) => {
+        socket.join(conversationId);
+    });
+
     socket.on("message:send", async (data) => {
         logger.info(`User ${user.id} is sending a message to conversation ${data.conversationId}`);
         const { conversationId, content } = data;

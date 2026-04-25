@@ -10,7 +10,7 @@ export const MessageSchema = zod.object({
 });
 
 export const MessageCreateSchema = MessageSchema.omit({ id: true, createdAt: true, updatedAt: true });
-export const MessagePublicSchema = MessageSchema.pick({ id: true, senderId: true, message: true, conversationId: true });
+export const MessagePublicSchema = MessageSchema.pick({ id: true, senderId: true, message: true, conversationId: true, createdAt: true });
 
 export type Message = zod.infer<typeof MessageSchema>;
 export type MessagePublic = zod.infer<typeof MessagePublicSchema>;

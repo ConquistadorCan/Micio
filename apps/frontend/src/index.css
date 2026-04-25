@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "@fontsource-variable/plus-jakarta-sans";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -139,14 +140,21 @@
   --popover-foreground: oklch(0.9551 0 0);
   --primary: oklch(0.6132 0.2294 291.7437);
   --primary-foreground: oklch(1.0000 0 0);
+  --primary-soft: oklch(0.6132 0.2294 291.7437 / 0.14);
+  --primary-hover: oklch(0.6732 0.2294 291.7437);
   --secondary: oklch(0.2940 0.0130 272.9312);
   --secondary-foreground: oklch(0.9551 0 0);
   --muted: oklch(0.2940 0.0130 272.9312);
   --muted-foreground: oklch(0.7058 0 0);
+  --subtle-foreground: oklch(0.5500 0.0100 272);
   --accent: oklch(0.2795 0.0368 260.0310);
   --accent-foreground: oklch(0.7857 0.1153 246.6596);
   --destructive: oklch(0.7106 0.1661 22.2162);
+  --destructive-foreground: oklch(1.0000 0 0);
+  --success: oklch(0.7459 0.1483 156.4499);
+  --warning: oklch(0.8077 0.1035 60);
   --border: oklch(0.3289 0.0092 268.3843);
+  --border-strong: oklch(0.3789 0.0120 268);
   --input: oklch(0.3289 0.0092 268.3843);
   --ring: oklch(0.6132 0.2294 291.7437);
   --chart-1: oklch(0.8003 0.1821 151.7110);
@@ -155,6 +163,7 @@
   --chart-4: oklch(0.6691 0.1569 260.1063);
   --chart-5: oklch(0.7058 0 0);
   --sidebar: oklch(0.2011 0.0039 286.0396);
+  --sidebar-deep: oklch(0.1711 0.0039 286.0396);
   --sidebar-foreground: oklch(0.9551 0 0);
   --sidebar-primary: oklch(0.6132 0.2294 291.7437);
   --sidebar-primary-foreground: oklch(1.0000 0 0);
@@ -162,11 +171,12 @@
   --sidebar-accent-foreground: oklch(0.6132 0.2294 291.7437);
   --sidebar-border: oklch(0.3289 0.0092 268.3843);
   --sidebar-ring: oklch(0.6132 0.2294 291.7437);
-  --destructive-foreground: oklch(1.0000 0 0);
+  --shadow-glow: 0 0 40px -8px oklch(0.6132 0.2294 291.7437 / 0.45);
   --radius: 1.4rem;
-  --font-sans: Plus Jakarta Sans, sans-serif;
+  --font-sans: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   --font-serif: Lora, serif;
-  --font-mono: IBM Plex Mono, monospace;
+  --font-mono: IBM Plex Mono, ui-monospace, monospace;
+  --tracking: -0.025em;
   --shadow-color: hsl(0 0% 0%);
   --shadow-opacity: 0.16;
   --shadow-blur: 3px;
@@ -189,11 +199,151 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html, body, #root {
+    height: 100%;
+  }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
     letter-spacing: var(--tracking-normal);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
   }
   html {
     @apply font-sans;
   }
+  button { font-family: inherit; letter-spacing: inherit; color: inherit; cursor: pointer; background: none; border: none; }
+  input, textarea { font-family: inherit; letter-spacing: inherit; color: inherit; background: none; border: none; outline: none; }
+  input::placeholder, textarea::placeholder { color: var(--muted-foreground); }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: oklch(0.3289 0.0092 268 / 0.7); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: oklch(0.4289 0.0092 268 / 0.9); border: 2px solid transparent; background-clip: padding-box; }
+
+/* Utility */
+.mono { font-family: var(--font-mono); letter-spacing: 0; }
+
+/* Animations */
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+@keyframes message-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-message-in { animation: message-in 0.28s ease-out; }
+.animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-fade-in { animation: fade-in 0.4s ease-out; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 44px; padding: 0 20px; border-radius: calc(var(--radius) * 0.8);
+  font-weight: 600; font-size: 14px; transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--primary); color: var(--primary-foreground); }
+.btn-primary:hover { background: var(--primary-hover); box-shadow: var(--shadow-glow); }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+.btn-ghost { background: transparent; color: var(--foreground); }
+.btn-ghost:hover { background: var(--secondary); }
+
+/* Input */
+.micio-input {
+  width: 100%; height: 48px;
+  padding: 0 18px;
+  background: var(--secondary);
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius) * 0.7);
+  font-size: 14px; color: var(--foreground);
+  transition: all 0.15s ease;
+}
+.micio-input:focus { border-color: var(--primary); background: oklch(0.25 0.01 272); }
+.micio-input-lg { height: 56px; font-size: 15px; padding: 0 22px; }
+
+/* Avatar */
+.micio-avatar {
+  border-radius: 999px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: white; position: relative; overflow: visible; letter-spacing: 0;
+}
+.micio-avatar-inner {
+  width: 100%; height: 100%; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+
+/* DM list item */
+.dm-item {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: calc(var(--radius) * 0.6);
+  transition: background 0.12s ease; text-align: left; position: relative;
+}
+.dm-item:hover { background: var(--sidebar-accent); }
+.dm-item.active { background: var(--sidebar-accent); }
+.dm-item.active::before {
+  content: ''; position: absolute; left: -6px; top: 50%; transform: translateY(-50%);
+  width: 4px; height: 60%; border-radius: 999px; background: var(--primary);
+}
+
+/* Unread badge */
+.unread-badge {
+  min-width: 20px; height: 20px; padding: 0 6px;
+  border-radius: 999px; background: var(--primary); color: white;
+  font-size: 11px; font-weight: 700; letter-spacing: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* Message bubble */
+.message-bubble {
+  max-width: 580px; padding: 12px 16px;
+  border-radius: calc(var(--radius) * 0.7);
+  line-height: 1.5; font-size: 14.5px; word-wrap: break-word;
+}
+.message-bubble.them { background: var(--secondary); color: var(--foreground); border-top-left-radius: 6px; }
+.message-bubble.me { background: var(--primary); color: var(--primary-foreground); border-top-right-radius: 6px; }
+
+/* Typing dots */
+.typing-dots { display: inline-flex; gap: 3px; align-items: center; }
+.typing-dots span { width: 6px; height: 6px; border-radius: 999px; background: var(--muted-foreground); animation: typing-bounce 1.2s infinite; }
+.typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+/* Tab underline */
+.micio-tab {
+  position: relative; padding: 10px 2px;
+  font-weight: 600; font-size: 14px; color: var(--muted-foreground); transition: color 0.12s;
+}
+.micio-tab:hover { color: var(--foreground); }
+.micio-tab.active { color: var(--foreground); }
+.micio-tab.active::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px;
+  height: 2px; background: var(--primary); border-radius: 999px;
+}
+
+/* Hero (auth page right panel) */
+.hero-bg {
+  background:
+    radial-gradient(circle at 20% 20%, oklch(0.6132 0.2294 291.7437 / 0.35), transparent 55%),
+    radial-gradient(circle at 80% 70%, oklch(0.7857 0.1153 246.6596 / 0.22), transparent 50%),
+    var(--sidebar-deep);
+}
+.hero-grid {
+  background-image:
+    linear-gradient(to right, oklch(1 0 0 / 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(1 0 0 / 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
 }

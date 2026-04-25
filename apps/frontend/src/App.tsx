@@ -1,7 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage } from './pages/LoginPage'
-import { RegisterPage } from './pages/RegisterPage'
-import { AuthProvider } from './context/AuthContext'
+import { ChatPage } from './pages/ChatPage'
+import { AuthProvider, useAuth } from './context/AuthContext'
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { accessToken } = useAuth()
+  return accessToken ? <>{children}</> : <Navigate to="/login" replace />
+}
 
 function App() {
   return (
@@ -10,7 +15,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
