@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Search, ArrowRight, Check } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { getGrad, getInitials } from '@/components/chat/utils'
-import { useApi } from '@/services/api'
+import { useUserSearch } from '@/hooks/useUserSearch'
 import type { UserMinimal } from '@micio/shared'
 
 function ModalShell({ title, subtitle, onClose, children, footer, width = 480 }: {
@@ -39,56 +39,18 @@ function ModalShell({ title, subtitle, onClose, children, footer, width = 480 }:
 export function NewChatModal({ onClose, onPick }: {
   onClose: () => void; onPick: (userId: string) => void
 }) {
-  const { apiFetch } = useApi()
-  const [q, setQ] = useState('')
-  const [results, setResults] = useState<UserMinimal[]>([])
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    const query = q.trim()
-
-    if (query.length < 2) {
-      setResults([])
-      setLoading(false)
-      return
-    }
-
-    const controller = new AbortController()
-    setLoading(true)
-
-    const timer = window.setTimeout(async () => {
-      try {
-        const data = await apiFetch<{ users: UserMinimal[] }>(
-          `/api/users/search?q=${encodeURIComponent(query)}`,
-          'GET',
-          undefined,
-          { signal: controller.signal },
-        )
-        setResults(data.users)
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') return
-        setResults([])
-      } finally {
-        if (!controller.signal.aborted) setLoading(false)
-      }
-    }, 250)
-
-    return () => {
-      window.clearTimeout(timer)
-      controller.abort()
-    }
-  }, [q, apiFetch])
+  const { query, setQuery, results, loading, hasEnoughQuery } = useUserSearch()
 
   return (
     <ModalShell title="New conversation" subtitle="Pick someone to start a 1-on-1 chat with." onClose={onClose} width={460}>
       <div style={{ position: 'relative', marginBottom: 14 }}>
         <Search size={16} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-foreground)' }} />
-        <input autoFocus className="micio-input micio-input-lg" placeholder="Search by nickname…" value={q} onChange={e => setQ(e.target.value)} style={{ paddingLeft: 42 }} />
+        <input autoFocus className="micio-input micio-input-lg" placeholder="Search by nickname…" value={query} onChange={e => setQuery(e.target.value)} style={{ paddingLeft: 42 }} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {q.trim().length < 2 && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>Type at least 2 characters.</div>}
-        {q.trim().length >= 2 && loading && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>Searching…</div>}
-        {q.trim().length >= 2 && !loading && results.length === 0 && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>No one found.</div>}
+        {!hasEnoughQuery && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>Type at least 2 characters.</div>}
+        {hasEnoughQuery && loading && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>Searching…</div>}
+        {hasEnoughQuery && !loading && results.length === 0 && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>No one found.</div>}
         {results.map(u => (
           <button key={u.id} onClick={() => onPick(u.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, textAlign: 'left', transition: 'background 0.12s' }}
             onMouseOver={e => (e.currentTarget as HTMLButtonElement).style.background = 'var(--secondary)'}
@@ -106,40 +68,38 @@ export function NewChatModal({ onClose, onPick }: {
   )
 }
 
-export function NewGroupModal({ onClose, onCreate, knownUsers }: {
-  onClose: () => void; onCreate: (name: string, memberIds: string[]) => void; knownUsers: UserMinimal[]
+export function NewGroupModal({ onClose, onCreate }: {
+  onClose: () => void; onCreate: (name: string, memberIds: string[]) => void
 }) {
   const [name, setName] = useState('')
-  const [q, setQ] = useState('')
-  const [selected, setSelected] = useState<Set<string>>(new Set())
-
-  const filtered = useMemo(() => {
-    const query = q.trim().toLowerCase()
-    if (!query) return knownUsers
-    return knownUsers.filter(u => u.nickname.toLowerCase().includes(query))
-  }, [q, knownUsers])
+  const [selected, setSelected] = useState<UserMinimal[]>([])
+  const { query, setQuery, results, loading, hasEnoughQuery } = useUserSearch()
 
   const toggle = (id: string) => {
-    const next = new Set(selected)
-    if (next.has(id)) next.delete(id); else next.add(id)
-    setSelected(next)
+    setSelected(current => {
+      const exists = current.some(user => user.id === id)
+      if (exists) return current.filter(user => user.id !== id)
+
+      const user = results.find(candidate => candidate.id === id)
+      return user ? [...current, user] : current
+    })
   }
 
-  const canCreate = name.trim().length > 0 && selected.size >= 2
+  const canCreate = name.trim().length > 0 && selected.length >= 2
 
   return (
     <ModalShell
       title="New group"
-      subtitle="Name your group and pick at least 2 people."
+      subtitle="Name your group and pick at least 2 other people."
       onClose={onClose}
       width={520}
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="mono" style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>{selected.size} selected</div>
+          <div className="mono" style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>{selected.length} selected</div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={onClose} className="btn btn-ghost" style={{ height: 40 }}>Cancel</button>
             <button
-              onClick={() => canCreate && onCreate(name.trim(), Array.from(selected))}
+              onClick={() => canCreate && onCreate(name.trim(), selected.map(user => user.id))}
               className="btn btn-primary"
               style={{ height: 40, opacity: canCreate ? 1 : 0.5, pointerEvents: canCreate ? 'auto' : 'none' }}
             >Create group</button>
@@ -152,16 +112,14 @@ export function NewGroupModal({ onClose, onCreate, knownUsers }: {
         <input autoFocus className="micio-input micio-input-lg" placeholder="e.g. Weekend Crew" value={name} onChange={e => setName(e.target.value)} />
       </div>
 
-      {selected.size > 0 && (
+      {selected.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14, padding: 10, background: 'var(--secondary)', borderRadius: 14 }}>
-          {Array.from(selected).map(id => {
-            const u = knownUsers.find(x => x.id === id)
-            if (!u) return null
+          {selected.map(u => {
             return (
-              <span key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 6px 4px 4px', background: 'var(--primary)', color: 'white', borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
+              <span key={u.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 6px 4px 4px', background: 'var(--primary)', color: 'white', borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
                 <div style={{ width: 20, height: 20, borderRadius: 999, background: getGrad(u.id), fontSize: 9, fontWeight: 700, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{getInitials(u.nickname)}</div>
                 {u.nickname}
-                <button onClick={() => toggle(id)} style={{ width: 18, height: 18, borderRadius: 999, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', opacity: 0.8 }}>×</button>
+                <button onClick={() => toggle(u.id)} style={{ width: 18, height: 18, borderRadius: 999, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', opacity: 0.8 }}>×</button>
               </span>
             )
           })}
@@ -170,12 +128,15 @@ export function NewGroupModal({ onClose, onCreate, knownUsers }: {
 
       <div style={{ position: 'relative', marginBottom: 10 }}>
         <Search size={16} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-foreground)' }} />
-        <input className="micio-input" placeholder="Search people…" value={q} onChange={e => setQ(e.target.value)} style={{ paddingLeft: 42, height: 44 }} />
+        <input className="micio-input" placeholder="Search people…" value={query} onChange={e => setQuery(e.target.value)} style={{ paddingLeft: 42, height: 44 }} />
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 300, overflow: 'auto' }}>
-        {filtered.map(u => {
-          const isSel = selected.has(u.id)
+        {!hasEnoughQuery && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>Type at least 2 characters.</div>}
+        {hasEnoughQuery && loading && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>Searching…</div>}
+        {hasEnoughQuery && !loading && results.length === 0 && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>No one found.</div>}
+        {results.map(u => {
+          const isSel = selected.some(user => user.id === u.id)
           return (
             <button key={u.id} onClick={() => toggle(u.id)} style={{
               display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, textAlign: 'left', transition: 'background 0.12s',

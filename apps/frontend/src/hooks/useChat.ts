@@ -5,7 +5,8 @@ import { useApi } from '@/services/api'
 import { connectSocket, disconnectSocket } from '@/services/socket'
 import { formatTime } from '@/components/chat/utils'
 import type { LocalConv, LocalMsg } from '@/types/chat'
-import type { ConversationPublic, MessagePublic, UserMinimal } from '@micio/shared'
+import { ConversationTypeSchema } from '@micio/shared'
+import type { ConversationPublic, MessagePublic } from '@micio/shared'
 import type { Socket } from 'socket.io-client'
 
 export function useChat() {
@@ -88,11 +89,11 @@ export function useChat() {
   }, [activeId])
 
   const startDM = useCallback(async (userId: string) => {
-    const existing = convs.find(c => c.type === 'PRIVATE' && c.participants.some(p => p.id === userId))
+    const existing = convs.find(c => c.type === ConversationTypeSchema.enum.PRIVATE && c.participants.some(p => p.id === userId))
     if (existing) { setActiveId(existing.id); setModal(null); return }
     try {
       const { conversation } = await apiFetch<{ conversation: ConversationPublic }>('/api/conversations', 'POST', {
-        type: 'PRIVATE', participantIds: [userId],
+        type: ConversationTypeSchema.enum.PRIVATE, participantIds: [userId],
       })
       const newConv: LocalConv = { ...conversation, messages: [], unread: 0, preview: '', lastAt: 'now' }
       setConvs(cs => [newConv, ...cs])
@@ -105,7 +106,7 @@ export function useChat() {
   const createGroup = useCallback(async (name: string, memberIds: string[]) => {
     try {
       const { conversation } = await apiFetch<{ conversation: ConversationPublic }>('/api/conversations', 'POST', {
-        type: 'GROUP', conversationName: name, participantIds: memberIds,
+        type: ConversationTypeSchema.enum.GROUP, conversationName: name, participantIds: memberIds,
       })
       const newConv: LocalConv = { ...conversation, messages: [], unread: 0, preview: 'Group created', lastAt: 'now' }
       setConvs(cs => [newConv, ...cs])
@@ -122,28 +123,14 @@ export function useChat() {
     navigate('/login')
   }, [authFetch, logout, navigate])
 
-  const knownUsers = useMemo((): UserMinimal[] => {
-    const seen = new Set<string>()
-    const users: UserMinimal[] = []
-    for (const c of convs) {
-      for (const p of c.participants) {
-        if (p.id !== meId && !seen.has(p.id)) {
-          seen.add(p.id)
-          users.push(p)
-        }
-      }
-    }
-    return users
-  }, [convs, meId])
-
   const filtered = useMemo(() => {
     let list = convs
     if (filter === 'unread') list = list.filter(c => c.unread > 0)
-    if (filter === 'groups') list = list.filter(c => c.type === 'GROUP')
+    if (filter === 'groups') list = list.filter(c => c.type === ConversationTypeSchema.enum.GROUP)
     if (query.trim()) {
       const q = query.toLowerCase()
       list = list.filter(c => {
-        const name = c.type === 'GROUP'
+        const name = c.type === ConversationTypeSchema.enum.GROUP
           ? c.conversationName
           : c.participants.find(p => p.id !== meId)?.nickname
         return name?.toLowerCase().includes(q) || c.preview.toLowerCase().includes(q)
@@ -157,7 +144,7 @@ export function useChat() {
   return {
     convs, activeId, setActiveId, filter, setFilter, query, setQuery,
     modal, setModal, loading,
-    active, filtered, knownUsers,
+    active, filtered,
     meId, meNickname,
     sendMessage, startDM, createGroup, handleSignOut,
   }

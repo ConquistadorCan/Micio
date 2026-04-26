@@ -40,7 +40,7 @@ export function ChatPage() {
         <NewChatModal onClose={() => chat.setModal(null)} onPick={chat.startDM} />
       )}
       {chat.modal === 'new-group' && (
-        <NewGroupModal onClose={() => chat.setModal(null)} onCreate={chat.createGroup} knownUsers={chat.knownUsers} />
+        <NewGroupModal onClose={() => chat.setModal(null)} onCreate={chat.createGroup} />
       )}
     </div>
   )
