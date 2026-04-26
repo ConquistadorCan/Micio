@@ -29,6 +29,10 @@ async function buildApiError(response: Response) {
   return new ApiError(response.status, message)
 }
 
+// Shared in-flight refresh promise — prevents multiple concurrent refreshes when
+// several requests 401 simultaneously and would each try to rotate the refresh token.
+let refreshPromise: Promise<string> | null = null;
+
 export function useApi() {
   const { accessToken, user, login, logout } = useAuth();
   const navigate = useNavigate();
@@ -66,19 +70,34 @@ export function useApi() {
     let response = await makeRequest(accessToken);
 
     if (response.status === 401) {
-      const refreshResponse = await fetch(`${BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      if (!refreshPromise) {
+        refreshPromise = fetch(`${BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+        })
+          .then(async (res) => {
+            if (!res.ok) throw new Error('Refresh failed');
+            const data = await res.json() as { accessToken: string };
+            return data.accessToken;
+          })
+          .finally(() => { refreshPromise = null; });
+      }
 
-      if (!refreshResponse.ok) {
+      let newToken: string;
+      try {
+        newToken = await refreshPromise;
+      } catch {
         logout();
         navigate('/login');
         throw new Error('Session expired');
       }
 
-      const { accessToken: newToken } = await refreshResponse.json();
-      login(newToken, user!);
+      if (!user) {
+        logout();
+        navigate('/login');
+        throw new Error('Session expired');
+      }
+      login(newToken, user);
       response = await makeRequest(newToken);
     }
 

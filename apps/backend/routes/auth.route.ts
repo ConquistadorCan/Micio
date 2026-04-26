@@ -7,7 +7,7 @@ import env from "../config/index.js";
 export async function authRoutes(fastify: FastifyInstance) {
     const authService = new AuthService();
 
-    fastify.post<{ Body: UserCreate }>("/register", async (request, reply) => {
+    fastify.post<{ Body: UserCreate }>("/register", async (request, reply): Promise<void> => {
         if (!request.body.email || !request.body.password || !request.body.nickname) {
             throw new ValidationError("Email, password and nickname are required");
         }
@@ -24,7 +24,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         reply.send({ accessToken });
     });
 
-    fastify.post<{ Body: UserLogin }>("/login", async (request, reply) => {
+    fastify.post<{ Body: UserLogin }>("/login", async (request, reply): Promise<void> => {
         if (!request.body.email || !request.body.password) {
             throw new ValidationError("Email and password are required");
         }
@@ -41,7 +41,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         reply.send({ accessToken });
     });
 
-    fastify.post("/refresh", async (request, reply) => {
+    fastify.post("/refresh", async (request, reply): Promise<void> => {
         const refreshToken = request.cookies.refreshToken;
         if (!refreshToken) {
             throw new ValidationError("Refresh token is required");
@@ -59,7 +59,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         reply.send({ accessToken });
     });
 
-    fastify.post("/logout", async (request, reply) => {
+    fastify.post("/logout", async (request, reply): Promise<void> => {
         const refreshToken = request.cookies.refreshToken;
         if (!refreshToken) {
             throw new ValidationError("Refresh token is required");

@@ -5,6 +5,7 @@ import { UnauthorizedError } from "../utils/errors.js";
 import { ConversationService } from "../services/conversations.service.js";
 import { MessageService } from "../services/message.service.js";
 import { logger } from "../utils/logger.js";
+import { prisma } from "../db/client.js";
 
 const conversationService = new ConversationService();
 const messageService = new MessageService();
@@ -46,8 +47,17 @@ io.on("connection", async (socket) => {
 
     socket.on("message:send", async (data, ack) => {
         try {
-            logger.info(`User ${user.id} is sending a message to conversation ${data.conversationId}`);
             const { conversationId, content } = data;
+
+            const participant = await prisma.conversationParticipant.findFirst({
+                where: { conversationId, userId: user.id }
+            });
+            if (!participant) {
+                ack?.({ ok: false, message: "You are not a member of this conversation" });
+                return;
+            }
+
+            logger.info(`User ${user.id} is sending a message to conversation ${conversationId}`);
             const message = await messageService.sendMessage(user.id, conversationId, content);
 
             io.to(conversationId).emit("message:new", message);
@@ -59,7 +69,7 @@ io.on("connection", async (socket) => {
         }
     });
 
-    socket.on("connect_error", (err) => console.log("Hata:", err.message));
+    socket.on("connect_error", (err) => logger.warn({ err: err.message }, "Socket connection error"));
 })
 
 export default io;

@@ -94,7 +94,7 @@ export class AuthService {
             nickname: userData.nickname
         };
 
-        const accessToken = jwt.sign(payload, env.JWT_SECRET, { expiresIn: "15m" });
+        const accessToken = jwt.sign(payload, env.JWT_SECRET, { expiresIn: Math.floor(env.ACCESS_TOKEN_EXPIRES_IN / 1000) });
 
         const refreshToken = randomBytes(64).toString("hex");
 

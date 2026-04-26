@@ -32,6 +32,7 @@ function AuthProvider({ children }: PropsWithChildren) {
                     setUser(decodeJwt<UserPublic>(newToken));
                 }
             } catch {
+                // Refresh failed (network error or invalid cookie) — user remains unauthenticated and will see /login
             } finally {
                 setIsInitializing(false);
             }
