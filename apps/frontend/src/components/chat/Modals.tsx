@@ -49,7 +49,7 @@ export function NewChatModal({ onClose, onPick, knownUsers }: {
     <ModalShell title="New conversation" subtitle="Pick someone to start a 1-on-1 chat with." onClose={onClose} width={460}>
       <div style={{ position: 'relative', marginBottom: 14 }}>
         <Search size={16} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-foreground)' }} />
-        <input autoFocus className="micio-input micio-input-lg" placeholder="Search by @nickname…" value={q} onChange={e => setQ(e.target.value)} style={{ paddingLeft: 42 }} />
+        <input autoFocus className="micio-input micio-input-lg" placeholder="Search by nickname…" value={q} onChange={e => setQ(e.target.value)} style={{ paddingLeft: 42 }} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {results.length === 0 && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>No one found.</div>}
