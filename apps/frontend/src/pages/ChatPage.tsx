@@ -34,7 +34,7 @@ export function ChatPage() {
         meId={chat.meId}
         meNickname={chat.meNickname}
       />
-      <ConversationPane conv={chat.active} meId={chat.meId} onSend={chat.sendMessage} />
+      <ConversationPane conv={chat.active} meId={chat.meId} onSend={chat.sendMessage} messageError={chat.messageError} />
 
       {chat.modal === 'new-chat' && (
         <NewChatModal
@@ -43,7 +43,12 @@ export function ChatPage() {
         />
       )}
       {chat.modal === 'new-group' && (
-        <NewGroupModal onClose={chat.closeModal} onCreate={chat.createGroup} />
+        <NewGroupModal
+          onClose={chat.closeModal}
+          onCreate={chat.createGroup}
+          error={chat.createGroupError}
+          loading={chat.creatingGroup}
+        />
       )}
     </div>
   )

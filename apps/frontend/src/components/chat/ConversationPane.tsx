@@ -110,8 +110,11 @@ function Composer({ onSend, name, disabled = false }: { onSend: (text: string) =
   )
 }
 
-export function ConversationPane({ conv, meId, onSend }: {
-  conv: LocalConv | null; meId: string; onSend: (text: string) => void
+export function ConversationPane({ conv, meId, onSend, messageError }: {
+  conv: LocalConv | null
+  meId: string
+  onSend: (text: string) => void
+  messageError?: string | null
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -171,6 +174,14 @@ export function ConversationPane({ conv, meId, onSend }: {
           return <MessageRow key={m.id} msg={m} meId={meId} conv={conv} mergeAbove={mergeAbove} />
         })}
       </div>
+
+      {messageError && !isPending && !hasError && (
+        <div style={{ padding: '0 24px 8px', flexShrink: 0 }}>
+          <div style={{ padding: '10px 12px', borderRadius: 12, background: 'color-mix(in oklab, var(--destructive) 14%, transparent)', color: 'var(--destructive)', fontSize: 13 }}>
+            {messageError}
+          </div>
+        </div>
+      )}
 
       <Composer onSend={onSend} name={name} disabled={isPending || hasError} />
     </div>

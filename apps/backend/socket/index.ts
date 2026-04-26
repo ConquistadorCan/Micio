@@ -44,12 +44,19 @@ io.on("connection", async (socket) => {
         socket.join(conversationId);
     });
 
-    socket.on("message:send", async (data) => {
-        logger.info(`User ${user.id} is sending a message to conversation ${data.conversationId}`);
-        const { conversationId, content } = data;
-        const message = await messageService.sendMessage(user.id, conversationId, content);
+    socket.on("message:send", async (data, ack) => {
+        try {
+            logger.info(`User ${user.id} is sending a message to conversation ${data.conversationId}`);
+            const { conversationId, content } = data;
+            const message = await messageService.sendMessage(user.id, conversationId, content);
 
-        io.to(conversationId).emit("message:new", message);
+            io.to(conversationId).emit("message:new", message);
+            ack?.({ ok: true, messageId: message.id });
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Could not send message";
+            logger.warn({ err, userId: user.id, conversationId: data?.conversationId }, "Message send failed");
+            ack?.({ ok: false, message });
+        }
     });
 
     socket.on("connect_error", (err) => console.log("Hata:", err.message));

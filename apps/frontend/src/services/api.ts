@@ -19,8 +19,9 @@ async function buildApiError(response: Response) {
   let message = `Request failed: ${response.status}`
 
   try {
-    const data = await response.json() as { message?: string }
+    const data = await response.json() as { message?: string; error?: { message?: string } }
     if (data.message) message = data.message
+    else if (data.error?.message) message = data.error.message
   } catch {
     // Ignore non-JSON error responses and fall back to status-based messaging.
   }

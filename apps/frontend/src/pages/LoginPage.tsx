@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, ArrowRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { useApi } from '@/services/api'
+import { ApiError, useApi } from '@/services/api'
 import { UserPublic } from '@micio/shared'
 import { decodeJwt } from '@/utils/jwt'
 
@@ -30,8 +30,12 @@ export function LoginPage() {
       const user = decodeJwt<UserPublic>(accessToken)
       login(accessToken, user)
       navigate('/chat')
-    } catch {
-      setError(mode === 'login' ? 'Invalid email or password.' : 'Could not create account. Try a different nickname or email.')
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setError(error.message)
+      } else {
+        setError(mode === 'login' ? 'Invalid email or password.' : 'Could not create account. Try a different nickname or email.')
+      }
     } finally {
       setLoading(false)
     }

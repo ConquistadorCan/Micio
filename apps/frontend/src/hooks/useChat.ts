@@ -31,6 +31,9 @@ export function useChat() {
   const [modal, setModal] = useState<'new-chat' | 'new-group' | null>(null)
   const [loading, setLoading] = useState(true)
   const [pendingDm, setPendingDm] = useState<LocalConv | null>(null)
+  const [createGroupError, setCreateGroupError] = useState<string | null>(null)
+  const [creatingGroup, setCreatingGroup] = useState(false)
+  const [messageError, setMessageError] = useState<string | null>(null)
 
   const socketRef = useRef<Socket | null>(null)
   const activeIdRef = useRef<string | null>(null)
@@ -48,6 +51,7 @@ export function useChat() {
 
   const closeModal = useCallback(() => {
     setModal(null)
+    setCreateGroupError(null)
   }, [])
 
   useEffect(() => {
@@ -72,6 +76,7 @@ export function useChat() {
       setConvs(cs => cs.map(c => {
         if (c.id !== msg.conversationId) return c
         const isActive = activeIdRef.current === c.id
+        if (isActive) setMessageError(null)
         return {
           ...c,
           messages: [...c.messages, localMsg],
@@ -88,6 +93,7 @@ export function useChat() {
   useEffect(() => {
     if (!activeId) return
     if (activeId.startsWith('pending:')) return
+    setMessageError(null)
     setConvs(cs => cs.map(c => c.id === activeId ? { ...c, unread: 0 } : c))
 
     apiFetch<{ messages: MessagePublic[] }>(`/api/conversations/${activeId}/messages`, 'GET')
@@ -101,8 +107,18 @@ export function useChat() {
   }, [activeId])
 
   const sendMessage = useCallback((text: string) => {
-    if (!activeId || !socketRef.current) return
-    socketRef.current.emit('message:send', { conversationId: activeId, content: text })
+    if (!activeId) return
+    if (!socketRef.current) {
+      setMessageError('You are offline right now. Reconnect and try again.')
+      return
+    }
+
+    setMessageError(null)
+    socketRef.current.emit('message:send', { conversationId: activeId, content: text }, (result?: { ok?: boolean; message?: string }) => {
+      if (!result?.ok) {
+        setMessageError(result?.message ?? 'Could not send message.')
+      }
+    })
   }, [activeId])
 
   const startDM = useCallback(async (selectedUser: UserMinimal) => {
@@ -169,6 +185,8 @@ export function useChat() {
   }, [convs, apiFetch, meId, meNickname, syncConversations])
 
   const createGroup = useCallback(async (name: string, memberIds: string[]) => {
+    setCreatingGroup(true)
+    setCreateGroupError(null)
     try {
       const { conversation } = await apiFetch<{ conversation: ConversationPublic }>('/api/conversations', 'POST', {
         type: ConversationTypeSchema.enum.GROUP, conversationName: name, participantIds: memberIds,
@@ -177,8 +195,13 @@ export function useChat() {
       setConvs(cs => [newConv, ...cs])
       setActiveId(newConv.id)
       socketRef.current?.emit('conversation:join', newConv.id)
-    } catch { }
-    setModal(null)
+      setModal(null)
+      setCreateGroupError(null)
+    } catch (error) {
+      setCreateGroupError(error instanceof Error ? error.message : 'Could not create group.')
+    } finally {
+      setCreatingGroup(false)
+    }
   }, [apiFetch])
 
   const handleSignOut = useCallback(async () => {
@@ -217,5 +240,6 @@ export function useChat() {
     active, filtered,
     meId, meNickname,
     sendMessage, startDM, createGroup, handleSignOut,
+    createGroupError, creatingGroup, messageError,
   }
 }

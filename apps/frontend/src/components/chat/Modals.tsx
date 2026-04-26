@@ -77,8 +77,11 @@ export function NewChatModal({ onClose, onPick }: {
   )
 }
 
-export function NewGroupModal({ onClose, onCreate }: {
-  onClose: () => void; onCreate: (name: string, memberIds: string[]) => void
+export function NewGroupModal({ onClose, onCreate, error, loading: isSubmitting = false }: {
+  onClose: () => void
+  onCreate: (name: string, memberIds: string[]) => void
+  error?: string | null
+  loading?: boolean
 }) {
   const [name, setName] = useState('')
   const [selected, setSelected] = useState<UserMinimal[]>([])
@@ -106,12 +109,13 @@ export function NewGroupModal({ onClose, onCreate }: {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="mono" style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>{selected.length} selected</div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={onClose} className="btn btn-ghost" style={{ height: 40 }}>Cancel</button>
+            <button onClick={onClose} className="btn btn-ghost" style={{ height: 40 }} disabled={isSubmitting}>Cancel</button>
             <button
               onClick={() => canCreate && onCreate(name.trim(), selected.map(user => user.id))}
               className="btn btn-primary"
-              style={{ height: 40, opacity: canCreate ? 1 : 0.5, pointerEvents: canCreate ? 'auto' : 'none' }}
-            >Create group</button>
+              disabled={!canCreate || isSubmitting}
+              style={{ height: 40, opacity: canCreate && !isSubmitting ? 1 : 0.5, pointerEvents: canCreate && !isSubmitting ? 'auto' : 'none' }}
+            >{isSubmitting ? 'Creating...' : 'Create group'}</button>
           </div>
         </div>
       }
@@ -120,6 +124,12 @@ export function NewGroupModal({ onClose, onCreate }: {
         <label className="mono" style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted-foreground)', display: 'block', marginBottom: 6, paddingLeft: 4 }}>Group name</label>
         <input autoFocus className="micio-input micio-input-lg" placeholder="e.g. Weekend Crew" value={name} onChange={e => setName(e.target.value)} />
       </div>
+
+      {error && (
+        <div style={{ marginBottom: 14, padding: '10px 12px', borderRadius: 12, background: 'color-mix(in oklab, var(--destructive) 14%, transparent)', color: 'var(--destructive)', fontSize: 13 }}>
+          {error}
+        </div>
+      )}
 
       {selected.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14, padding: 10, background: 'var(--secondary)', borderRadius: 14 }}>
