@@ -1,13 +1,23 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { useApi } from '@/services/api'
+import { ApiError, useApi } from '@/services/api'
 import { connectSocket, disconnectSocket } from '@/services/socket'
 import { formatTime } from '@/components/chat/utils'
 import type { LocalConv, LocalMsg } from '@/types/chat'
 import { ConversationTypeSchema } from '@micio/shared'
-import type { ConversationPublic, MessagePublic } from '@micio/shared'
+import type { ConversationPublic, MessagePublic, UserMinimal } from '@micio/shared'
 import type { Socket } from 'socket.io-client'
+
+function toLocalConv(conversation: ConversationPublic, existing?: LocalConv): LocalConv {
+  return {
+    ...conversation,
+    messages: existing?.messages ?? [],
+    unread: existing?.unread ?? 0,
+    preview: existing?.preview ?? '',
+    lastAt: existing?.lastAt ?? '',
+  }
+}
 
 export function useChat() {
   const { accessToken, user, logout } = useAuth()
@@ -20,6 +30,7 @@ export function useChat() {
   const [query, setQuery] = useState('')
   const [modal, setModal] = useState<'new-chat' | 'new-group' | null>(null)
   const [loading, setLoading] = useState(true)
+  const [pendingDm, setPendingDm] = useState<LocalConv | null>(null)
 
   const socketRef = useRef<Socket | null>(null)
   const activeIdRef = useRef<string | null>(null)
@@ -28,22 +39,27 @@ export function useChat() {
   const meId = user?.id ?? ''
   const meNickname = user?.nickname ?? ''
 
+  const syncConversations = useCallback((conversations: ConversationPublic[]) => {
+    setConvs(current => {
+      const existingById = new Map(current.map(conversation => [conversation.id, conversation]))
+      return conversations.map(conversation => toLocalConv(conversation, existingById.get(conversation.id)))
+    })
+  }, [])
+
+  const closeModal = useCallback(() => {
+    setModal(null)
+  }, [])
+
   useEffect(() => {
     if (!accessToken) { navigate('/login'); return }
     apiFetch<{ conversations: ConversationPublic[] }>('/api/conversations', 'GET')
       .then(data => {
-        const loaded = data.conversations.map(c => ({
-          ...c,
-          messages: [] as LocalMsg[],
-          unread: 0,
-          preview: '',
-          lastAt: '',
-        }))
+        const loaded = data.conversations.map(c => toLocalConv(c))
         setConvs(loaded)
         if (loaded.length > 0) setActiveId(loaded[0].id)
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [accessToken, apiFetch, navigate])
 
   useEffect(() => {
     if (!accessToken) return
@@ -71,6 +87,7 @@ export function useChat() {
 
   useEffect(() => {
     if (!activeId) return
+    if (activeId.startsWith('pending:')) return
     setConvs(cs => cs.map(c => c.id === activeId ? { ...c, unread: 0 } : c))
 
     apiFetch<{ messages: MessagePublic[] }>(`/api/conversations/${activeId}/messages`, 'GET')
@@ -88,20 +105,68 @@ export function useChat() {
     socketRef.current.emit('message:send', { conversationId: activeId, content: text })
   }, [activeId])
 
-  const startDM = useCallback(async (userId: string) => {
-    const existing = convs.find(c => c.type === ConversationTypeSchema.enum.PRIVATE && c.participants.some(p => p.id === userId))
-    if (existing) { setActiveId(existing.id); setModal(null); return }
+  const startDM = useCallback(async (selectedUser: UserMinimal) => {
+    const existing = convs.find(c => c.type === ConversationTypeSchema.enum.PRIVATE && c.participants.some(p => p.id === selectedUser.id))
+    if (existing) {
+      setActiveId(existing.id)
+      setModal(null)
+      return
+    }
+
+    const tempId = `pending:${selectedUser.id}`
+    const optimisticConv: LocalConv = {
+      id: tempId,
+      type: ConversationTypeSchema.enum.PRIVATE,
+      participants: [{ id: meId, nickname: meNickname }, selectedUser],
+      messages: [],
+      unread: 0,
+      preview: '',
+      lastAt: 'now',
+      clientState: 'pending',
+    }
+
+    setPendingDm(optimisticConv)
+    setActiveId(tempId)
+    setModal(null)
+
     try {
       const { conversation } = await apiFetch<{ conversation: ConversationPublic }>('/api/conversations', 'POST', {
-        type: ConversationTypeSchema.enum.PRIVATE, participantIds: [userId],
+        type: ConversationTypeSchema.enum.PRIVATE, participantIds: [selectedUser.id],
       })
       const newConv: LocalConv = { ...conversation, messages: [], unread: 0, preview: '', lastAt: 'now' }
+      setPendingDm(current => current?.id === tempId ? null : current)
       setConvs(cs => [newConv, ...cs])
       setActiveId(newConv.id)
       socketRef.current?.emit('conversation:join', newConv.id)
-    } catch { }
-    setModal(null)
-  }, [convs, apiFetch])
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        try {
+          const { conversations } = await apiFetch<{ conversations: ConversationPublic[] }>('/api/conversations', 'GET')
+          syncConversations(conversations)
+
+          const existingConversation = conversations.find(conversation =>
+            conversation.type === ConversationTypeSchema.enum.PRIVATE &&
+            conversation.participants.some(participant => participant.id === selectedUser.id),
+          )
+
+          if (existingConversation) {
+            setPendingDm(current => current?.id === tempId ? null : current)
+            setActiveId(existingConversation.id)
+            return
+          }
+        } catch {
+          setPendingDm(current => current?.id === tempId
+            ? { ...current, clientState: 'error', clientError: 'Conversation exists, but we could not open it right now.' }
+            : current)
+          return
+        }
+      }
+
+      setPendingDm(current => current?.id === tempId
+        ? { ...current, clientState: 'error', clientError: error instanceof Error ? error.message : 'Could not start conversation.' }
+        : current)
+    }
+  }, [convs, apiFetch, meId, meNickname, syncConversations])
 
   const createGroup = useCallback(async (name: string, memberIds: string[]) => {
     try {
@@ -136,14 +201,19 @@ export function useChat() {
         return name?.toLowerCase().includes(q) || c.preview.toLowerCase().includes(q)
       })
     }
+    if (pendingDm && !list.some(c => c.id === pendingDm.id) && filter !== 'groups') {
+      list = [pendingDm, ...list]
+    }
     return list
-  }, [convs, filter, query, meId])
+  }, [convs, filter, query, meId, pendingDm])
 
-  const active = convs.find(c => c.id === activeId) ?? null
+  const active = (pendingDm && pendingDm.id === activeId)
+    ? pendingDm
+    : convs.find(c => c.id === activeId) ?? null
 
   return {
     convs, activeId, setActiveId, filter, setFilter, query, setQuery,
-    modal, setModal, loading,
+    modal, setModal, closeModal, loading,
     active, filtered,
     meId, meNickname,
     sendMessage, startDM, createGroup, handleSignOut,

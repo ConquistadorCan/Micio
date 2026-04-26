@@ -37,12 +37,18 @@ function ModalShell({ title, subtitle, onClose, children, footer, width = 480 }:
 }
 
 export function NewChatModal({ onClose, onPick }: {
-  onClose: () => void; onPick: (userId: string) => void
+  onClose: () => void
+  onPick: (user: UserMinimal) => void
 }) {
   const { query, setQuery, results, loading, hasEnoughQuery } = useUserSearch()
 
   return (
-    <ModalShell title="New conversation" subtitle="Pick someone to start a 1-on-1 chat with." onClose={onClose} width={460}>
+    <ModalShell
+      title="New conversation"
+      subtitle="Pick someone to start a 1-on-1 chat with."
+      onClose={onClose}
+      width={460}
+    >
       <div style={{ position: 'relative', marginBottom: 14 }}>
         <Search size={16} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-foreground)' }} />
         <input autoFocus className="micio-input micio-input-lg" placeholder="Search by nickname…" value={query} onChange={e => setQuery(e.target.value)} style={{ paddingLeft: 42 }} />
@@ -52,9 +58,12 @@ export function NewChatModal({ onClose, onPick }: {
         {hasEnoughQuery && loading && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>Searching…</div>}
         {hasEnoughQuery && !loading && results.length === 0 && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>No one found.</div>}
         {results.map(u => (
-          <button key={u.id} onClick={() => onPick(u.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, textAlign: 'left', transition: 'background 0.12s' }}
-            onMouseOver={e => (e.currentTarget as HTMLButtonElement).style.background = 'var(--secondary)'}
-            onMouseOut={e => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}
+          <button key={u.id} onClick={() => onPick(u)} style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, textAlign: 'left', transition: 'background 0.12s',
+            background: 'transparent',
+          }}
+            onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--secondary)' }}
+            onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
           >
             <Avatar user={u} size={40} />
             <div style={{ flex: 1, minWidth: 0 }}>

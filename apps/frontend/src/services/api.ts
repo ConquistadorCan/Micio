@@ -5,6 +5,29 @@ import { useAuth } from '../context/AuthContext';
 const BASE_URL = import.meta.env.VITE_API_URL;
 type RequestOptions = Pick<RequestInit, 'signal'>
 
+export class ApiError extends Error {
+  status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
+async function buildApiError(response: Response) {
+  let message = `Request failed: ${response.status}`
+
+  try {
+    const data = await response.json() as { message?: string }
+    if (data.message) message = data.message
+  } catch {
+    // Ignore non-JSON error responses and fall back to status-based messaging.
+  }
+
+  return new ApiError(response.status, message)
+}
+
 export function useApi() {
   const { accessToken, user, login, logout } = useAuth();
   const navigate = useNavigate();
@@ -19,7 +42,7 @@ export function useApi() {
     });
 
     if (!response.ok) {
-      throw new Error(`Request failed: ${response.status}`);
+      throw await buildApiError(response);
     }
 
     return response.json() as Promise<T>;
@@ -59,7 +82,7 @@ export function useApi() {
     }
 
     if (!response.ok) {
-      throw new Error(`Request failed: ${response.status}`);
+      throw await buildApiError(response);
     }
 
     return response.json() as Promise<T>;

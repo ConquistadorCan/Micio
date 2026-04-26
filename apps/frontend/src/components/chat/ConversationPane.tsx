@@ -52,12 +52,13 @@ function MessageRow({ msg, meId, conv, mergeAbove }: { msg: LocalMsg; meId: stri
   )
 }
 
-function Composer({ onSend, name }: { onSend: (text: string) => void; name: string }) {
+function Composer({ onSend, name, disabled = false }: { onSend: (text: string) => void; name: string; disabled?: boolean }) {
   const [text, setText] = useState('')
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   const submit = (e?: React.SyntheticEvent) => {
     e?.preventDefault()
+    if (disabled) return
     if (!text.trim()) return
     onSend(text.trim())
     setText('')
@@ -83,17 +84,18 @@ function Composer({ onSend, name }: { onSend: (text: string) => void; name: stri
       }}>
         <textarea
           ref={taRef} value={text} onChange={onInput} onKeyDown={onKey}
-          placeholder={`Message ${name}`} rows={1}
+          placeholder={disabled ? `Starting chat with ${name}...` : `Message ${name}`} rows={1}
+          disabled={disabled}
           style={{ flex: 1, minHeight: 36, maxHeight: 140, resize: 'none', padding: '8px 4px', fontSize: 14.5, lineHeight: 1.5, color: 'var(--foreground)', background: 'transparent' }}
         />
         <button
           type="submit"
-          disabled={!text.trim()}
+          disabled={disabled || !text.trim()}
           style={{
             width: 36, height: 36, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: text.trim() ? 'var(--primary)' : 'var(--accent)',
-            color: text.trim() ? 'white' : 'var(--muted-foreground)',
-            boxShadow: text.trim() ? 'var(--shadow-glow)' : 'none', transition: 'all 0.15s',
+            background: !disabled && text.trim() ? 'var(--primary)' : 'var(--accent)',
+            color: !disabled && text.trim() ? 'white' : 'var(--muted-foreground)',
+            boxShadow: !disabled && text.trim() ? 'var(--shadow-glow)' : 'none', transition: 'all 0.15s',
           }}
         ><Send size={17} /></button>
       </form>
@@ -129,6 +131,8 @@ export function ConversationPane({ conv, meId, onSend }: {
   const isGroup = conv.type === 'GROUP'
   const other = !isGroup ? conv.participants.find(p => p.id !== meId) : null
   const name = isGroup ? (conv.conversationName ?? 'Group') : (other?.nickname ?? 'Unknown')
+  const isPending = conv.clientState === 'pending'
+  const hasError = conv.clientState === 'error'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--background)', minWidth: 0, minHeight: 0 }}>
@@ -148,10 +152,17 @@ export function ConversationPane({ conv, meId, onSend }: {
       </div>
 
       <div ref={scrollRef} style={{ flex: 1, overflow: 'auto', padding: '16px 24px 8px', minHeight: 0 }}>
+        {hasError && (
+          <div style={{ margin: '16px 0 8px', padding: '12px 14px', borderRadius: 14, background: 'color-mix(in oklab, var(--destructive) 14%, transparent)', color: 'var(--destructive)', fontSize: 13 }}>
+            {conv.clientError ?? 'Could not open this conversation.'}
+          </div>
+        )}
         {conv.messages.length === 0 && (
           <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
             <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--foreground)', marginBottom: 6 }}>Say hi to {name}</div>
-            <div style={{ fontSize: 14 }}>This is the beginning of your conversation.</div>
+            <div style={{ fontSize: 14 }}>
+              {isPending ? 'Your conversation is being prepared.' : 'This is the beginning of your conversation.'}
+            </div>
           </div>
         )}
         {conv.messages.map((m, i) => {
@@ -161,7 +172,7 @@ export function ConversationPane({ conv, meId, onSend }: {
         })}
       </div>
 
-      <Composer onSend={onSend} name={name} />
+      <Composer onSend={onSend} name={name} disabled={isPending || hasError} />
     </div>
   )
 }

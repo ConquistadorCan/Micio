@@ -7,4 +7,6 @@ export type LocalConv = ConversationPublic & {
   unread: number
   preview: string
   lastAt: string
+  clientState?: 'pending' | 'error'
+  clientError?: string
 }
