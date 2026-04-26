@@ -9,6 +9,45 @@ import { ConversationTypeSchema } from '@micio/shared'
 import type { ConversationPublic, MessagePublic, UserMinimal } from '@micio/shared'
 import type { Socket } from 'socket.io-client'
 
+function createOptimisticMessage(params: {
+  conversationId: string
+  senderId: string
+  text: string
+}): LocalMsg {
+  const now = new Date()
+  const clientId = `client:${now.getTime()}:${Math.random().toString(36).slice(2, 8)}`
+  return {
+    id: clientId,
+    clientId,
+    clientState: 'pending',
+    senderId: params.senderId,
+    message: params.text,
+    conversationId: params.conversationId,
+    createdAt: now,
+    localAt: formatTime(now),
+  }
+}
+
+function reconcileIncomingMessage(messages: LocalMsg[], incoming: LocalMsg, meId: string): LocalMsg[] {
+  if (messages.some(message => message.id === incoming.id)) {
+    return messages
+  }
+
+  if (incoming.senderId === meId) {
+    const optimisticIndex = messages.findIndex(message =>
+      message.clientState === 'pending' &&
+      message.senderId === incoming.senderId &&
+      message.message === incoming.message,
+    )
+
+    if (optimisticIndex >= 0) {
+      return messages.map((message, index) => index === optimisticIndex ? incoming : message)
+    }
+  }
+
+  return [...messages, incoming]
+}
+
 function toLocalConv(conversation: ConversationPublic, existing?: LocalConv): LocalConv {
   return {
     ...conversation,
@@ -79,7 +118,7 @@ export function useChat() {
         if (isActive) setMessageError(null)
         return {
           ...c,
-          messages: [...c.messages, localMsg],
+          messages: reconcileIncomingMessage(c.messages, localMsg, meId),
           preview: msg.message,
           lastAt: 'now',
           unread: isActive ? 0 : c.unread + 1,
@@ -88,7 +127,7 @@ export function useChat() {
     })
 
     return () => { disconnectSocket() }
-  }, [accessToken])
+  }, [accessToken, meId])
 
   useEffect(() => {
     if (!activeId) return
@@ -113,13 +152,36 @@ export function useChat() {
       return
     }
 
+    const optimisticMessage = createOptimisticMessage({
+      conversationId: activeId,
+      senderId: meId,
+      text,
+    })
+
     setMessageError(null)
+    setConvs(cs => cs.map(c => c.id === activeId
+      ? {
+        ...c,
+        messages: [...c.messages, optimisticMessage],
+        preview: text,
+        lastAt: 'now',
+      }
+      : c))
+
     socketRef.current.emit('message:send', { conversationId: activeId, content: text }, (result?: { ok?: boolean; message?: string }) => {
       if (!result?.ok) {
         setMessageError(result?.message ?? 'Could not send message.')
+        setConvs(cs => cs.map(c => c.id === activeId
+          ? {
+            ...c,
+            messages: c.messages.map(message => message.clientId === optimisticMessage.clientId
+              ? { ...message, clientState: 'error' }
+              : message),
+          }
+          : c))
       }
     })
-  }, [activeId])
+  }, [activeId, meId])
 
   const startDM = useCallback(async (selectedUser: UserMinimal) => {
     const existing = convs.find(c => c.type === ConversationTypeSchema.enum.PRIVATE && c.participants.some(p => p.id === selectedUser.id))

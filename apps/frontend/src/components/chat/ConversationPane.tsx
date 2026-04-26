@@ -33,6 +33,8 @@ function MessageRow({ msg, meId, conv, mergeAbove }: { msg: LocalMsg; meId: stri
   const sender = conv.participants.find(p => p.id === msg.senderId)
   const displayName = isMe ? 'You' : (sender?.nickname ?? 'Unknown')
   const at = msg.localAt ?? formatTime(msg.createdAt)
+  const isPending = msg.clientState === 'pending'
+  const hasError = msg.clientState === 'error'
 
   return (
     <div className="animate-message-in" style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', gap: 10, marginTop: mergeAbove ? 2 : 14 }}>
@@ -44,9 +46,16 @@ function MessageRow({ msg, meId, conv, mergeAbove }: { msg: LocalMsg; meId: stri
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4, paddingLeft: 2, paddingRight: 2 }}>
             <span style={{ fontSize: 13, fontWeight: 700 }}>{displayName}</span>
             <span className="mono" style={{ fontSize: 10, color: 'var(--muted-foreground)', fontWeight: 500 }}>{at}</span>
+            {isPending && <span className="mono" style={{ fontSize: 10, color: 'var(--muted-foreground)', fontWeight: 500 }}>sending...</span>}
+            {hasError && <span className="mono" style={{ fontSize: 10, color: 'var(--destructive)', fontWeight: 600 }}>failed</span>}
           </div>
         )}
-        <div className={`message-bubble ${isMe ? 'me' : 'them'}`}>{msg.message}</div>
+        <div
+          className={`message-bubble ${isMe ? 'me' : 'them'}`}
+          style={{ opacity: isPending ? 0.72 : 1, outline: hasError ? '1px solid color-mix(in oklab, var(--destructive) 40%, transparent)' : undefined }}
+        >
+          {msg.message}
+        </div>
       </div>
     </div>
   )
