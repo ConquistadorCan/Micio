@@ -48,6 +48,20 @@ function reconcileIncomingMessage(messages: LocalMsg[], incoming: LocalMsg, meId
   return [...messages, incoming]
 }
 
+function toLocalMessage(message: MessagePublic): LocalMsg {
+  return {
+    ...message,
+    localAt: formatTime(message.createdAt),
+  }
+}
+
+function mergeFetchedMessages(existing: LocalMsg[], fetched: MessagePublic[], meId: string): LocalMsg[] {
+  return fetched
+    .map(toLocalMessage)
+    .reduce((messages, message) => reconcileIncomingMessage(messages, message, meId), existing)
+    .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime())
+}
+
 function toLocalConv(conversation: ConversationPublic, existing?: LocalConv): LocalConv {
   return {
     ...conversation,
@@ -76,6 +90,7 @@ export function useChat() {
 
   const socketRef = useRef<Socket | null>(null)
   const activeIdRef = useRef<string | null>(null)
+  const messageRequestIdRef = useRef(0)
   activeIdRef.current = activeId
 
   const meId = user?.id ?? ''
@@ -97,12 +112,11 @@ export function useChat() {
     if (!accessToken) { navigate('/login'); return }
     apiFetch<{ conversations: ConversationPublic[] }>('/api/conversations', 'GET')
       .then(data => {
-        const loaded = data.conversations.map(c => toLocalConv(c))
-        setConvs(loaded)
-        if (loaded.length > 0) setActiveId(loaded[0].id)
+        syncConversations(data.conversations)
+        setActiveId(current => current ?? data.conversations[0]?.id ?? null)
       })
       .finally(() => setLoading(false))
-  }, [accessToken, apiFetch, navigate])
+  }, [accessToken, apiFetch, navigate, syncConversations])
 
   useEffect(() => {
     if (!accessToken) return
@@ -132,18 +146,20 @@ export function useChat() {
   useEffect(() => {
     if (!activeId) return
     if (activeId.startsWith('pending:')) return
+    const requestId = ++messageRequestIdRef.current
     setMessageError(null)
     setConvs(cs => cs.map(c => c.id === activeId ? { ...c, unread: 0 } : c))
 
     apiFetch<{ messages: MessagePublic[] }>(`/api/conversations/${activeId}/messages`, 'GET')
       .then(data => {
         setConvs(cs => cs.map(c => {
+          if (requestId !== messageRequestIdRef.current) return c
           if (c.id !== activeId) return c
-          return { ...c, messages: data.messages.map(m => ({ ...m, localAt: formatTime(m.createdAt) })) }
+          return { ...c, messages: mergeFetchedMessages(c.messages, data.messages, meId) }
         }))
       })
       .catch(() => {})
-  }, [activeId])
+  }, [activeId, apiFetch, meId])
 
   const sendMessage = useCallback((text: string) => {
     if (!activeId) return
