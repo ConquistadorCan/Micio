@@ -37,7 +37,7 @@ export function ChatPage() {
       <ConversationPane conv={chat.active} meId={chat.meId} onSend={chat.sendMessage} />
 
       {chat.modal === 'new-chat' && (
-        <NewChatModal onClose={() => chat.setModal(null)} onPick={chat.startDM} knownUsers={chat.knownUsers} />
+        <NewChatModal onClose={() => chat.setModal(null)} onPick={chat.startDM} />
       )}
       {chat.modal === 'new-group' && (
         <NewGroupModal onClose={() => chat.setModal(null)} onCreate={chat.createGroup} knownUsers={chat.knownUsers} />

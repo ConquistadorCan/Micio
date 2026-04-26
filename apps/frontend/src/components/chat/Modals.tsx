@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Search, ArrowRight, Check } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { getGrad, getInitials } from '@/components/chat/utils'
+import { useApi } from '@/services/api'
 import type { UserMinimal } from '@micio/shared'
 
 function ModalShell({ title, subtitle, onClose, children, footer, width = 480 }: {
@@ -35,15 +36,48 @@ function ModalShell({ title, subtitle, onClose, children, footer, width = 480 }:
   )
 }
 
-export function NewChatModal({ onClose, onPick, knownUsers }: {
-  onClose: () => void; onPick: (userId: string) => void; knownUsers: UserMinimal[]
+export function NewChatModal({ onClose, onPick }: {
+  onClose: () => void; onPick: (userId: string) => void
 }) {
+  const { apiFetch } = useApi()
   const [q, setQ] = useState('')
-  const results = useMemo(() => {
-    const query = q.trim().toLowerCase()
-    if (!query) return knownUsers
-    return knownUsers.filter(u => u.nickname.toLowerCase().includes(query))
-  }, [q, knownUsers])
+  const [results, setResults] = useState<UserMinimal[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const query = q.trim()
+
+    if (query.length < 2) {
+      setResults([])
+      setLoading(false)
+      return
+    }
+
+    const controller = new AbortController()
+    setLoading(true)
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const data = await apiFetch<{ users: UserMinimal[] }>(
+          `/api/users/search?q=${encodeURIComponent(query)}`,
+          'GET',
+          undefined,
+          { signal: controller.signal },
+        )
+        setResults(data.users)
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        setResults([])
+      } finally {
+        if (!controller.signal.aborted) setLoading(false)
+      }
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [q, apiFetch])
 
   return (
     <ModalShell title="New conversation" subtitle="Pick someone to start a 1-on-1 chat with." onClose={onClose} width={460}>
@@ -52,7 +86,9 @@ export function NewChatModal({ onClose, onPick, knownUsers }: {
         <input autoFocus className="micio-input micio-input-lg" placeholder="Search by nickname…" value={q} onChange={e => setQ(e.target.value)} style={{ paddingLeft: 42 }} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {results.length === 0 && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>No one found.</div>}
+        {q.trim().length < 2 && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>Type at least 2 characters.</div>}
+        {q.trim().length >= 2 && loading && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>Searching…</div>}
+        {q.trim().length >= 2 && !loading && results.length === 0 && <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>No one found.</div>}
         {results.map(u => (
           <button key={u.id} onClick={() => onPick(u.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, textAlign: 'left', transition: 'background 0.12s' }}
             onMouseOver={e => (e.currentTarget as HTMLButtonElement).style.background = 'var(--secondary)'}

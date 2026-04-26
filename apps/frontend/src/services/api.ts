@@ -1,17 +1,20 @@
+import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
+type RequestOptions = Pick<RequestInit, 'signal'>
 
 export function useApi() {
   const { accessToken, user, login, logout } = useAuth();
   const navigate = useNavigate();
 
-  async function authFetch<T>(url: string, method: string, body?: unknown): Promise<T> {
+  const authFetch = useCallback(async <T,>(url: string, method: string, body?: unknown, options?: RequestOptions): Promise<T> => {
     const response = await fetch(`${BASE_URL}${url}`, {
       method,
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
+      ...options,
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
 
@@ -20,9 +23,9 @@ export function useApi() {
     }
 
     return response.json() as Promise<T>;
-  }
+  }, []);
 
-  async function apiFetch<T>(url: string, method: string, body?: unknown): Promise<T> {
+  const apiFetch = useCallback(async <T,>(url: string, method: string, body?: unknown, options?: RequestOptions): Promise<T> => {
     const fullUrl = `${BASE_URL}${url}`;
 
     const makeRequest = (token: string | null) =>
@@ -32,6 +35,7 @@ export function useApi() {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
+        ...options,
         ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
       });
 
@@ -59,7 +63,7 @@ export function useApi() {
     }
 
     return response.json() as Promise<T>;
-  }
+  }, [accessToken, login, logout, navigate, user]);
 
   return { apiFetch, authFetch };
 }
