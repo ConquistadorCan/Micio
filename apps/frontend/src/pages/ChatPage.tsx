@@ -2,16 +2,13 @@ import { useChat } from '@/hooks/useChat'
 import { DMSidebar } from '@/components/chat/DMSidebar'
 import { ConversationPane } from '@/components/chat/ConversationPane'
 import { NewChatModal, NewGroupModal } from '@/components/chat/Modals'
+import { LoadingPage } from './LoadingPage'
 
 export function ChatPage() {
   const chat = useChat()
 
   if (chat.loading) {
-    return (
-      <div className="dark" style={{ height: '100vh', background: 'var(--sidebar-deep)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span className="typing-dots"><span /><span /><span /></span>
-      </div>
-    )
+    return (LoadingPage())
   }
 
   return (
