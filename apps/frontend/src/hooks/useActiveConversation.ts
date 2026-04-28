@@ -4,7 +4,7 @@ import { useApi } from '@/services/api'
 import { connectSocket, disconnectSocket } from '@/services/socket'
 import { formatTime } from '@/components/chat/utils'
 import type { LocalConv, LocalMsg } from '@/types/chat'
-import type { ConversationPublic, MessagePublic } from '@micio/shared'
+import type { MessagePublic } from '@micio/shared'
 import type { Socket } from 'socket.io-client'
 
 function createOptimisticMessage(params: {
@@ -113,7 +113,13 @@ export function useActiveConversation({ activeId, meId, setConvs }: Params) {
         setConvs(cs => cs.map(c => {
           if (requestId !== messageRequestIdRef.current) return c
           if (c.id !== activeId) return c
-          return { ...c, messages: mergeFetchedMessages(c.messages, data.messages, meId) }
+          const merged = mergeFetchedMessages(c.messages, data.messages, meId)
+          const last = merged[merged.length - 1]
+          return {
+            ...c,
+            messages: merged,
+            ...(last && !c.preview && { preview: last.message, lastAt: last.localAt }),
+          }
         }))
       })
       .catch(() => {})
