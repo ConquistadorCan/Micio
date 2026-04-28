@@ -4,6 +4,7 @@ import { MessageService } from "../services/message.service.js";
 import { ConversationCreate } from "@micio/shared";
 import { ForbiddenError, UnauthorizedError, ValidationError } from "../utils/errors.js";
 import { prisma } from "../db/client.js";
+import io from "../socket/index.js";
 
 export async function conversationRoutes(fastify: FastifyInstance) {
     const conversationService = new ConversationService();
@@ -24,6 +25,13 @@ export async function conversationRoutes(fastify: FastifyInstance) {
         }
 
         const conversation = await conversationService.createConversation(userId, request.body);
+
+        conversation.participants
+            .filter(p => p.id !== userId)
+            .forEach(p => {
+                io.to(`user:${p.id}`).emit("conversation:new", conversation);
+            });
+
         reply.status(201).send({ conversation });
     });
 

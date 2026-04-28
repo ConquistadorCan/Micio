@@ -4,7 +4,7 @@ import { useApi } from '@/services/api'
 import { connectSocket, disconnectSocket } from '@/services/socket'
 import { formatTime } from '@/components/chat/utils'
 import type { LocalConv, LocalMsg } from '@/types/chat'
-import type { MessagePublic } from '@micio/shared'
+import type { ConversationPublic, MessagePublic } from '@micio/shared'
 import type { Socket } from 'socket.io-client'
 
 function createOptimisticMessage(params: {
@@ -87,8 +87,17 @@ export function useActiveConversation({ activeId, meId, setConvs }: Params) {
       }))
     })
 
+    socket.on('conversation:new', (conv: import('@micio/shared').ConversationPublic) => {
+      socket.emit('conversation:join', conv.id)
+      setConvs(cs => {
+        if (cs.some(c => c.id === conv.id)) return cs
+        return [{ ...conv, messages: [], unread: 1, preview: '', lastAt: 'now' }, ...cs]
+      })
+    })
+
     return () => {
       socket.off('message:new')
+      socket.off('conversation:new')
       disconnectSocket()
     }
   }, [accessToken, meId, setConvs])

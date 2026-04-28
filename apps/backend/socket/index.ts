@@ -35,6 +35,8 @@ io.on("connection", async (socket) => {
     logger.info(`User connected: ${socket.id}`);
     const user = socket.data.userJwtPayload;
 
+    socket.join(`user:${user.id}`);
+
     const conversations = await conversationService.getConversationsForUser(user.id);
 
     conversations.forEach(conversation => {
