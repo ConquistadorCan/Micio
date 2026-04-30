@@ -49,7 +49,7 @@ export function LoginPage() {
   return (
     <div
       className="dark animate-fade-in"
-      style={{ height: '100vh', display: 'grid', gridTemplateColumns: '1fr 1.1fr', background: 'var(--background)' }}
+      style={{ height: '100vh', display: 'grid', gridTemplateColumns: '1fr 1.1fr', background: 'var(--background)', color: 'var(--foreground)' }}
     >
       {/* LEFT — form */}
       <div style={{ display: 'flex', flexDirection: 'column', padding: '48px 64px', overflow: 'auto' }}>
