@@ -40,12 +40,13 @@ export function useApi() {
   const navigate = useNavigate();
 
   const authFetch = useCallback(async <T,>(url: string, method: string, body?: unknown, options?: RequestOptions): Promise<T> => {
+    const hasBody = body !== undefined;
     const response = await fetch(`${BASE_URL}${url}`, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: hasBody ? { 'Content-Type': 'application/json' } : undefined,
       credentials: 'include',
       ...options,
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...(hasBody ? { body: JSON.stringify(body) } : {}),
     });
 
     if (!response.ok) {
@@ -57,16 +58,17 @@ export function useApi() {
 
   const apiFetch = useCallback(async <T,>(url: string, method: string, body?: unknown, options?: RequestOptions): Promise<T> => {
     const fullUrl = `${BASE_URL}${url}`;
+    const hasBody = body !== undefined;
 
     const makeRequest = (token: string | null) =>
       fetch(fullUrl, {
         method,
         headers: {
-          'Content-Type': 'application/json',
+          ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         ...options,
-        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        ...(hasBody ? { body: JSON.stringify(body) } : {}),
       });
 
     let response = await makeRequest(accessToken);
