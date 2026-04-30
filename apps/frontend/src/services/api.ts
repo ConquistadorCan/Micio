@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { decodeJwt } from '@/utils/jwt';
+import type { UserPublic } from '@micio/shared';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 type RequestOptions = Pick<RequestInit, 'signal'>
@@ -34,7 +36,7 @@ async function buildApiError(response: Response) {
 let refreshPromise: Promise<string> | null = null;
 
 export function useApi() {
-  const { accessToken, user, login, logout } = useAuth();
+  const { accessToken, login, logout } = useAuth();
   const navigate = useNavigate();
 
   const authFetch = useCallback(async <T,>(url: string, method: string, body?: unknown, options?: RequestOptions): Promise<T> => {
@@ -92,12 +94,7 @@ export function useApi() {
         throw new Error('Session expired');
       }
 
-      if (!user) {
-        logout();
-        navigate('/login');
-        throw new Error('Session expired');
-      }
-      login(newToken, user);
+      login(newToken, decodeJwt<UserPublic>(newToken));
       response = await makeRequest(newToken);
     }
 
@@ -106,7 +103,7 @@ export function useApi() {
     }
 
     return response.json() as Promise<T>;
-  }, [accessToken, login, logout, navigate, user]);
+  }, [accessToken, login, logout, navigate]);
 
   return { apiFetch, authFetch };
 }

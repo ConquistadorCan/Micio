@@ -9,14 +9,19 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return accessToken ? <>{children}</> : <Navigate to="/login" replace />
 }
 
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { accessToken } = useAuth()
+  return accessToken ? <Navigate to="/chat" replace /> : <>{children}</>
+}
+
 function AppRoutes() {
-  const { isInitializing } = useAuth()
+  const { accessToken, isInitializing } = useAuth()
   if (isInitializing) return <LoadingPage />
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<Navigate to={accessToken ? "/chat" : "/login"} replace />} />
+        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
