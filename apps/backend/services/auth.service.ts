@@ -2,7 +2,7 @@ import { UserCreate, UserPublic } from "@micio/shared";
 import { UserService } from "./user.service.js";
 import { v7 as uuidv7 } from "uuid";
 import { prisma } from "../db/client.js";
-import { Prisma } from "../prisma/generated/prisma/index.js";
+import { Prisma } from "@prisma/client";
 import { compare } from "bcrypt";
 import env from "../config/index.js";
 import jwt from "jsonwebtoken";
@@ -17,7 +17,7 @@ export class AuthService {
     async register(userData: UserCreate): Promise<{ accessToken: string; refreshToken: string; }> {
         const newUser = await userService.createUser(userData);
 
-        const { accessToken, refreshToken } = await this.generateTokens({
+        const { accessToken, refreshToken } = this.generateTokens({
             id: newUser.id,
             email: newUser.email,
             nickname: newUser.nickname
@@ -33,7 +33,7 @@ export class AuthService {
             throw new UnauthorizedError("Invalid email or password");
         }
 
-        return await prisma.$transaction(async (tx) => {
+        return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             await tx.refreshToken.deleteMany({ where: { userId: user.id } });
 
             const tokens = this.generateTokens(user);
@@ -47,7 +47,7 @@ export class AuthService {
     async refreshTokens(oldToken: string) {
         const hashedOldToken = this.hashToken(oldToken);
 
-        return await prisma.$transaction(async (tx) => {
+        return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             const tokenData = await tx.refreshToken.findUnique({
                 where: { token: hashedOldToken }
             });
