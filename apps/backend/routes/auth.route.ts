@@ -17,7 +17,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         reply.setCookie("refreshToken", refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "none",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             maxAge: env.REFRESH_TOKEN_EXPIRES_IN / 1000
         });
 
@@ -34,7 +34,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         reply.setCookie("refreshToken", refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "none",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             maxAge: env.REFRESH_TOKEN_EXPIRES_IN / 1000
         });
 
@@ -52,7 +52,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         reply.setCookie("refreshToken", newRefreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "none",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             maxAge: env.REFRESH_TOKEN_EXPIRES_IN / 1000
         });
 
