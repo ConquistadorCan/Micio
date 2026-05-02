@@ -12,7 +12,8 @@ const messageService = new MessageService();
 
 const io = new Server({
     cors: {
-        origin: env.CLIENT_URL
+        origin: env.CLIENT_URL,
+        credentials: true
     }
 });
 

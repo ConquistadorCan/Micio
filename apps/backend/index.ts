@@ -24,7 +24,7 @@ app.register(authRoutes, { prefix: "/auth" });
 app.register(protectedRoutes, { prefix: "/api" });
 
 const start = async () => {
-    await app.listen({ port: env.PORT });
+    await app.listen({ port: env.PORT, host: '0.0.0.0' });
     io.attach(app.server);
 };
 
