@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import env from "../config/index.js";
 import { UserPublic } from "@micio/shared";
 import { UnauthorizedError } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 
 
 export async function authMiddleware(
@@ -20,7 +21,8 @@ export async function authMiddleware(
     try {
         const decoded = jwt.verify(token, env.JWT_SECRET);
         request.userJwtPayload = decoded as UserPublic;
-    } catch {
+    } catch (err) {
+        logger.debug({ reason: err instanceof Error ? err.message : "unknown" }, "JWT auth failed");
         throw new UnauthorizedError("Invalid or expired token");
     }
 }

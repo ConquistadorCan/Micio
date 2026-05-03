@@ -9,6 +9,7 @@ import jwt from "jsonwebtoken";
 import { randomBytes } from "crypto";
 import { UnauthorizedError, NotFoundError } from "../utils/errors.js";
 import { createHash } from "crypto";
+import { logger } from "../utils/logger.js";
 
 
 const userService = new UserService();
@@ -23,6 +24,7 @@ export class AuthService {
             nickname: newUser.nickname
         });
 
+        logger.info({ email: newUser.email, nickname: newUser.nickname }, "User registered");
         return { accessToken, refreshToken };
     }
 
@@ -40,6 +42,7 @@ export class AuthService {
 
             await this.saveRefreshToken(tx, user.id, tokens.refreshToken);
 
+            logger.info({ email, userId: user.id }, "User logged in");
             return tokens;
         });
     }
@@ -72,6 +75,7 @@ export class AuthService {
 
             await this.saveRefreshToken(tx, user.id, tokens.refreshToken);
 
+            logger.debug({ userId: user.id }, "Tokens refreshed");
             return {
                 accessToken: tokens.accessToken,
                 newRefreshToken: tokens.refreshToken
@@ -82,9 +86,11 @@ export class AuthService {
     async logout(refreshToken: string) {
         const hashedOldToken = this.hashToken(refreshToken);
 
-        await prisma.refreshToken.deleteMany({
+        const result = await prisma.refreshToken.deleteMany({
             where: { token: hashedOldToken }
         });
+
+        logger.info({ tokenRevoked: result.count > 0 }, "User logged out");
     }
 
     private generateTokens(userData: UserPublic): { accessToken: string; refreshToken: string } {

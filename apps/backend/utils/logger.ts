@@ -30,7 +30,7 @@ const targets = shouldSendErrorsToBetterStack
       consoleTarget,
       {
         target: "@logtail/pino",
-        level: "error",
+        level: "info",
         options: {
           sourceToken: betterStackSourceToken,
           options: {
@@ -41,6 +41,13 @@ const targets = shouldSendErrorsToBetterStack
     ]
   : [consoleTarget];
 
+// Used by Fastify for request/response logging — console only, never sent to BetterStack
+export const requestLogger = pino({
+  level: isDev ? "debug" : "info",
+  transport: { targets: [consoleTarget] },
+});
+
+// Used for manual log calls throughout the app — goes to BetterStack in production
 export const logger = pino({
   level: isDev ? "debug" : "info",
   transport: { targets },

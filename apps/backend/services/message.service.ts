@@ -1,6 +1,7 @@
 import { MessagePublic } from "@micio/shared";
 import { prisma } from "../db/client.js";
 import { v7 as uuidv7 } from "uuid";
+import { logger } from "../utils/logger.js";
 
 export class MessageService {
     async sendMessage(senderId: string, conversationId: string, content: string): Promise<MessagePublic> {
@@ -13,6 +14,7 @@ export class MessageService {
             }
         })
 
+        logger.debug({ senderId, conversationId }, "Message sent");
         return {
             id: message.id,
             message: message.message,
@@ -27,6 +29,8 @@ export class MessageService {
             where: { conversationId },
             orderBy: { createdAt: 'asc' }
         });
+
+        logger.debug({ conversationId, count: messages.length }, "Fetched messages");
         return messages.map(m => ({
             id: m.id,
             message: m.message,

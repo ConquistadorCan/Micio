@@ -2,6 +2,7 @@ import { prisma } from "../db/client.js";
 import { v7 as uuidv7 } from "uuid";
 import { ConversationCreate, ConversationPublic, ConversationTypeSchema } from "@micio/shared";
 import { ConflictError, ValidationError } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 
 export class ConversationService {
     async getConversationsForUser(userId: string): Promise <ConversationPublic[]> {
@@ -20,7 +21,7 @@ export class ConversationService {
             }
         });
 
-        return conversations.map(conversationParticipant => ({
+        const result = conversations.map(conversationParticipant => ({
             id: conversationParticipant.conversation.id,
             type: conversationParticipant.conversation.type,
             conversationName: conversationParticipant.conversation.conversationName ?? undefined,
@@ -29,6 +30,9 @@ export class ConversationService {
                 nickname: p.user.nickname
             }))
         }));
+
+        logger.debug({ userId, count: result.length }, "Fetched conversations");
+        return result;
     }
 
     async createConversation(userId: string, conversationData: ConversationCreate): Promise<ConversationPublic> {
@@ -81,7 +85,7 @@ export class ConversationService {
                     }
                 })
                 
-                return {
+                const privateResult = {
                     id: conversation.id,
                     type: conversation.type,
                     conversationName: conversation.conversationName ?? undefined,
@@ -89,7 +93,9 @@ export class ConversationService {
                         id: p.user.id,
                         nickname: p.user.nickname
                     }))
-                }
+                };
+                logger.info({ type: "PRIVATE", participantCount: participantIds.length, creatorId: userId }, "Conversation created");
+                return privateResult;
             }
             case ConversationTypeSchema.enum.GROUP: {
                 const participantIds = conversationData.participantIds.includes(userId)
@@ -128,7 +134,7 @@ export class ConversationService {
                     }
                 })
                 
-                return {
+                const groupResult = {
                     id: conversation.id,
                     type: conversation.type,
                     conversationName: conversation.conversationName ?? undefined,
@@ -136,7 +142,9 @@ export class ConversationService {
                         id: p.user.id,
                         nickname: p.user.nickname
                     }))
-                }
+                };
+                logger.info({ type: "GROUP", participantCount: participantIds.length, creatorId: userId, name: conversationData.conversationName }, "Conversation created");
+                return groupResult;
             }
         }
     }

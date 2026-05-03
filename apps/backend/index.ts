@@ -5,18 +5,18 @@ import env from "./config/index.js";
 import io from "./socket/index.js";
 import { authRoutes } from "./routes/auth.route.js";
 import { protectedRoutes } from "./routes/protected.routes.js";
-import { logger } from "./utils/logger.js";
+import { logger, requestLogger } from "./utils/logger.js";
 import { errorHandler } from "./middlewares/error.handler.js";
 
 const app = Fastify({
-    loggerInstance: logger
+    loggerInstance: requestLogger
 });
 
 app.register(fastifyCors, { origin: env.CLIENT_URL, credentials: true });
 app.register(fastifyCookie);
 app.register(errorHandler);
 
-app.get("/health", async (_request, reply) => {
+app.get("/health", { logLevel: "silent" }, async (_request, reply) => {
     reply.send({ status: "ok" });
 });
 
@@ -26,6 +26,7 @@ app.register(protectedRoutes, { prefix: "/api" });
 const start = async () => {
     await app.listen({ port: env.PORT, host: '0.0.0.0' });
     io.attach(app.server);
+    logger.info({ port: env.PORT }, "Server ready");
 };
 
 start().catch((err) => {

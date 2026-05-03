@@ -20,21 +20,22 @@ const io = new Server({
 io.use((socket, next) => {
     try {
         const token = socket.handshake.auth.token;
-    
+
         const decoded = jwt.verify(token, env.JWT_SECRET);
         socket.data.userJwtPayload = decoded;
-    
+
         next();
     }
     catch (err) {
         const message = err instanceof Error ? err.message : "Invalid or missing token";
+        logger.warn({ reason: message }, "Socket auth failed");
         next(new UnauthorizedError(message));
     }
 })
 
 io.on("connection", async (socket) => {
-    logger.info(`User connected: ${socket.id}`);
     const user = socket.data.userJwtPayload;
+    logger.debug({ userId: user.id, socketId: socket.id }, "Socket connected");
 
     socket.join(`user:${user.id}`);
 
@@ -42,10 +43,15 @@ io.on("connection", async (socket) => {
 
     conversations.forEach(conversation => {
         socket.join(conversation.id);
-    })
+    });
+
+    socket.on("disconnect", () => {
+        logger.debug({ userId: user.id, socketId: socket.id }, "Socket disconnected");
+    });
 
     socket.on("conversation:join", (conversationId: string) => {
         socket.join(conversationId);
+        logger.debug({ userId: user.id, conversationId }, "Socket joined conversation room");
     });
 
     socket.on("message:send", async (data, ack) => {
@@ -60,7 +66,6 @@ io.on("connection", async (socket) => {
                 return;
             }
 
-            logger.info(`User ${user.id} is sending a message to conversation ${conversationId}`);
             const message = await messageService.sendMessage(user.id, conversationId, content);
 
             io.to(conversationId).emit("message:new", message);

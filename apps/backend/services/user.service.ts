@@ -3,6 +3,7 @@ import { prisma } from "../db/client.js";
 import { v7 as uuidv7 } from "uuid";
 import { hash } from "bcrypt";
 import { ConflictError } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 
 const SALT_ROUNDS = 10;
 const NUM_OF_USER_AT_SEARCH = 10;
@@ -50,7 +51,7 @@ export class UserService {
             return []
         }
 
-        return prisma.user.findMany({
+        const results = await prisma.user.findMany({
             where: {
                 nickname: {
                     contains: search,
@@ -66,6 +67,9 @@ export class UserService {
                 nickname: "asc"
             },
             take: NUM_OF_USER_AT_SEARCH
-        })
+        });
+
+        logger.debug({ query: search, resultCount: results.length }, "User search");
+        return results;
     }
 }
