@@ -8,7 +8,9 @@ const envSchema = zod.object({
     PORT: zod.string().transform(val => parseInt(val, 10)),
     CLIENT_URL: zod.string(),
     REFRESH_TOKEN_EXPIRES_IN: zod.string().transform(val => parseInt(val, 10)),
-    ACCESS_TOKEN_EXPIRES_IN: zod.string().transform(val => parseInt(val, 10))
+    ACCESS_TOKEN_EXPIRES_IN: zod.string().transform(val => parseInt(val, 10)),
+    BETTERSTACK_SOURCE_TOKEN: zod.string().optional(),
+    BETTERSTACK_INGESTING_HOST: zod.string().optional()
 })
 
 const env = envSchema.parse(process.env);
