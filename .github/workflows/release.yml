@@ -1,0 +1,168 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Optional version bump override"
+        required: false
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+        default: auto
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Create semantic version tag
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Calculate next version
+        id: version
+        env:
+          BUMP_OVERRIDE: ${{ github.event.inputs.bump || 'auto' }}
+        run: |
+          set -euo pipefail
+
+          latest_tag="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)"
+
+          if [ -n "$latest_tag" ]; then
+            current_version="${latest_tag#v}"
+            commit_range="${latest_tag}..HEAD"
+          else
+            current_version="$(node -p "const p=require('./package.json'); /^[0-9]+\\.[0-9]+\\.[0-9]+$/.test(p.version) ? p.version : '0.0.0'")"
+            if [ "$current_version" = "0.0.0" ]; then
+              current_version="0.1.0"
+            fi
+
+            if [ "$BUMP_OVERRIDE" = "auto" ]; then
+              next_tag="v${current_version}"
+
+              if git rev-parse "$next_tag" >/dev/null 2>&1; then
+                echo "Tag $next_tag already exists. Skipping release."
+                echo "should_release=false" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+
+              {
+                echo "should_release=true"
+                echo "latest_tag="
+                echo "next_tag=$next_tag"
+                echo "bump=initial"
+              } >> "$GITHUB_OUTPUT"
+
+              echo "Initial release: $next_tag"
+              exit 0
+            fi
+
+            commit_range="HEAD"
+          fi
+
+          if [ -n "$latest_tag" ] && [ "$(git rev-list --count "$commit_range")" -eq 0 ]; then
+            echo "No commits since $latest_tag. Skipping release."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          commits="$(git log --format=%B "$commit_range")"
+          bump="$BUMP_OVERRIDE"
+
+          if [ "$bump" = "auto" ]; then
+            if printf '%s\n' "$commits" | grep -Eq '(^|[[:space:]])BREAKING CHANGE:|^[a-zA-Z]+(\([^)]+\))?!:'; then
+              bump="major"
+            elif printf '%s\n' "$commits" | grep -Eq '^feat(\([^)]+\))?:'; then
+              bump="minor"
+            else
+              bump="patch"
+            fi
+          fi
+
+          IFS='.' read -r major minor patch <<< "$current_version"
+
+          case "$bump" in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+            *)
+              echo "Unknown bump type: $bump" >&2
+              exit 1
+              ;;
+          esac
+
+          next_tag="v${major}.${minor}.${patch}"
+
+          if git rev-parse "$next_tag" >/dev/null 2>&1; then
+            echo "Tag $next_tag already exists. Skipping release."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          {
+            echo "should_release=true"
+            echo "latest_tag=$latest_tag"
+            echo "next_tag=$next_tag"
+            echo "bump=$bump"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Next release: $next_tag ($bump)"
+
+      - name: Create tag
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          NEXT_TAG: ${{ steps.version.outputs.next_tag }}
+        run: |
+          git tag -a "$NEXT_TAG" -m "Release $NEXT_TAG"
+          git push origin "$NEXT_TAG"
+
+      - name: Create GitHub release
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST_TAG: ${{ steps.version.outputs.latest_tag }}
+          NEXT_TAG: ${{ steps.version.outputs.next_tag }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$LATEST_TAG" ]; then
+            gh release create "$NEXT_TAG" \
+              --title "$NEXT_TAG" \
+              --generate-notes \
+              --notes-start-tag "$LATEST_TAG"
+          else
+            gh release create "$NEXT_TAG" \
+              --title "$NEXT_TAG" \
+              --generate-notes
+          fi
