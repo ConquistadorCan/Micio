@@ -10,45 +10,38 @@ const betterStackEndpoint = betterStackIngestingHost
     : `https://${betterStackIngestingHost}`
   : undefined;
 
-const shouldSendToBetterStack = Boolean(
+const shouldSendErrorsToBetterStack = Boolean(
   !isDev && betterStackSourceToken && betterStackEndpoint
 );
 
-export const logger = pino(
-  isDev
-    ? {
-        level: "debug",
-        transport: {
-          target: "pino-pretty",
+const consoleTarget = {
+  target: "pino-pretty",
+  level: isDev ? "debug" : "info",
+  options: {
+    colorize: isDev,
+    translateTime: "SYS:HH:MM:ss",
+    ignore: "pid,hostname",
+    singleLine: !isDev,
+  },
+};
+
+const targets = shouldSendErrorsToBetterStack
+  ? [
+      consoleTarget,
+      {
+        target: "@logtail/pino",
+        level: "error",
+        options: {
+          sourceToken: betterStackSourceToken,
           options: {
-            colorize: true,
-            translateTime: "SYS:HH:MM:ss",
-            ignore: "pid,hostname",
+            endpoint: betterStackEndpoint,
           },
         },
-      }
-    : {
-        level: "info",
-        transport: shouldSendToBetterStack
-          ? {
-              targets: [
-                {
-                  target: "pino/file",
-                  level: "info",
-                  options: { destination: 1 },
-                },
-                {
-                  target: "@logtail/pino",
-                  level: "info",
-                  options: {
-                    sourceToken: betterStackSourceToken,
-                    options: {
-                      endpoint: betterStackEndpoint,
-                    },
-                  },
-                },
-              ],
-            }
-          : undefined,
-      }
-);
+      },
+    ]
+  : [consoleTarget];
+
+export const logger = pino({
+  level: isDev ? "debug" : "info",
+  transport: { targets },
+});
