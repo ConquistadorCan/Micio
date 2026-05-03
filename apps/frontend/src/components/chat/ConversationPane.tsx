@@ -33,7 +33,6 @@ function MessageRow({ msg, meId, conv, mergeAbove }: { msg: LocalMsg; meId: stri
   const sender = conv.participants.find(p => p.id === msg.senderId)
   const displayName = isMe ? 'You' : (sender?.nickname ?? 'Unknown')
   const at = msg.localAt ?? formatTime(msg.createdAt)
-  const isPending = msg.clientState === 'pending'
   const hasError = msg.clientState === 'error'
 
   return (
@@ -46,13 +45,12 @@ function MessageRow({ msg, meId, conv, mergeAbove }: { msg: LocalMsg; meId: stri
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4, paddingLeft: 2, paddingRight: 2 }}>
             <span style={{ fontSize: 13, fontWeight: 700 }}>{displayName}</span>
             <span className="mono" style={{ fontSize: 10, color: 'var(--muted-foreground)', fontWeight: 500 }}>{at}</span>
-            {isPending && <span className="mono" style={{ fontSize: 10, color: 'var(--muted-foreground)', fontWeight: 500 }}>sending...</span>}
             {hasError && <span className="mono" style={{ fontSize: 10, color: 'var(--destructive)', fontWeight: 600 }}>failed</span>}
           </div>
         )}
         <div
           className={`message-bubble ${isMe ? 'me' : 'them'}`}
-          style={{ opacity: isPending ? 0.72 : 1, outline: hasError ? '1px solid color-mix(in oklab, var(--destructive) 40%, transparent)' : undefined }}
+          style={{ outline: hasError ? '1px solid color-mix(in oklab, var(--destructive) 40%, transparent)' : undefined }}
         >
           {msg.message}
         </div>
@@ -93,7 +91,7 @@ function Composer({ onSend, name, disabled = false }: { onSend: (text: string) =
       }}>
         <textarea
           ref={taRef} value={text} onChange={onInput} onKeyDown={onKey}
-          placeholder={disabled ? `Starting chat with ${name}...` : `Message ${name}`} rows={1}
+          placeholder={`Message ${name}`} rows={1}
           disabled={disabled}
           style={{ flex: 1, minHeight: 36, maxHeight: 140, resize: 'none', padding: '8px 4px', fontSize: 14.5, lineHeight: 1.5, color: 'var(--foreground)', background: 'transparent' }}
         />
@@ -143,7 +141,6 @@ export function ConversationPane({ conv, meId, onSend, messageError }: {
   const isGroup = conv.type === 'GROUP'
   const other = !isGroup ? conv.participants.find(p => p.id !== meId) : null
   const name = isGroup ? (conv.conversationName ?? 'Group') : (other?.nickname ?? 'Unknown')
-  const isPending = conv.clientState === 'pending'
   const hasError = conv.clientState === 'error'
 
   return (
@@ -172,9 +169,7 @@ export function ConversationPane({ conv, meId, onSend, messageError }: {
         {conv.messages.length === 0 && (
           <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
             <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--foreground)', marginBottom: 6 }}>Say hi to {name}</div>
-            <div style={{ fontSize: 14 }}>
-              {isPending ? 'Your conversation is being prepared.' : 'This is the beginning of your conversation.'}
-            </div>
+            <div style={{ fontSize: 14 }}>This is the beginning of your conversation.</div>
           </div>
         )}
         {conv.messages.map((m, i) => {
@@ -184,7 +179,7 @@ export function ConversationPane({ conv, meId, onSend, messageError }: {
         })}
       </div>
 
-      {messageError && !isPending && !hasError && (
+      {messageError && !hasError && (
         <div style={{ padding: '0 24px 8px', flexShrink: 0 }}>
           <div style={{ padding: '10px 12px', borderRadius: 12, background: 'color-mix(in oklab, var(--destructive) 14%, transparent)', color: 'var(--destructive)', fontSize: 13 }}>
             {messageError}
@@ -192,7 +187,7 @@ export function ConversationPane({ conv, meId, onSend, messageError }: {
         </div>
       )}
 
-      <Composer onSend={onSend} name={name} disabled={isPending || hasError} />
+      <Composer onSend={onSend} name={name} disabled={hasError} />
     </div>
   )
 }
